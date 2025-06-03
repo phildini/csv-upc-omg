@@ -32,9 +32,12 @@ def test_fetch_product_title_sync_success(mock_client_class):
 
     result = fetch_product_title_sync("123456789012")
     assert result == "Test Product Name"
-    mock_client.get.assert_called_once_with(
-        "https://www.barcodelookup.com/123456789012"
-    )
+    mock_client.get.assert_called_once()
+    # Verify URL and headers were passed
+    call_args = mock_client.get.call_args
+    assert call_args[0][0] == "https://www.barcodelookup.com/123456789012"
+    assert "headers" in call_args[1]
+    assert "User-Agent" in call_args[1]["headers"]
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
