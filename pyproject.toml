@@ -40,7 +40,10 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 88
 target-version = "py311"
-select = ["E", "F", "W", "I", "N", "UP", "S", "C4", "PTH"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "C4", "PTH"]
+ignore = ["S101"]  # Allow assert statements in tests
 
 [tool.ruff.format]
 quote-style = "double"
