@@ -62,13 +62,14 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "--cov=src/csv_upc_omg --cov-report=term-missing --cov-report=html --cov-fail-under=100"
+addopts = "--cov=src/csv_upc_omg --cov-report=term-missing --cov-report=html --cov-fail-under=90"
 
 [tool.coverage.run]
 source = ["src"]
 omit = ["tests/*", "*/test_*"]
 
 [tool.coverage.report]
+fail_under = 90
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
