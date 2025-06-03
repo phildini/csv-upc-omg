@@ -5,7 +5,9 @@ description = "Taking UPCs, translating them, and making a database of the resul
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "beautifulsoup4>=4.13.4",
     "click>=8.0.0",
+    "httpx>=0.28.1",
 ]
 authors = [
     {name = "Philip James", email = "phildini@phildini.net"},
