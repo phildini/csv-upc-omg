@@ -49,7 +49,11 @@ def fetch_product_title_sync(upc: str, timeout: float = 10.0) -> str | None:
 
             soup = BeautifulSoup(response.text, "html.parser")
 
-            return soup.select_one(".product-details h4").text.strip()
+            title_element = soup.select_one(".product-details h4")
+            if title_element is None:
+                return None
+            title_text: str = title_element.text
+            return title_text.strip()
 
     except httpx.TimeoutException:
         raise BarcodeAPIError(f"Timeout while fetching product for UPC {upc}")

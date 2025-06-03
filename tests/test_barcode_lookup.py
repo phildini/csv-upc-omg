@@ -54,13 +54,11 @@ def test_fetch_product_title_sync_selector_not_found(mock_client_class):
     mock_response.raise_for_status.return_value = None
 
     mock_client = Mock()
-    mock_client.get.side_effect = AttributeError(
-        "'NoneType' object has no attribute 'text'"
-    )
+    mock_client.get.return_value = mock_response
     mock_client_class.return_value.__enter__.return_value = mock_client
 
-    with pytest.raises(BarcodeAPIError, match="Error fetching product"):
-        fetch_product_title_sync("123456789012")
+    result = fetch_product_title_sync("123456789012")
+    assert result is None
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
@@ -77,13 +75,11 @@ def test_fetch_product_title_sync_no_selector_match(mock_client_class):
     mock_response.raise_for_status.return_value = None
 
     mock_client = Mock()
-    mock_client.get.side_effect = AttributeError(
-        "'NoneType' object has no attribute 'text'"
-    )
+    mock_client.get.return_value = mock_response
     mock_client_class.return_value.__enter__.return_value = mock_client
 
-    with pytest.raises(BarcodeAPIError, match="Error fetching product"):
-        fetch_product_title_sync("123456789012")
+    result = fetch_product_title_sync("123456789012")
+    assert result is None
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
