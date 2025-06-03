@@ -62,11 +62,36 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+addopts = "--cov=src/csv_upc_omg --cov-report=term-missing --cov-report=html --cov-fail-under=90"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*", "*/test_*"]
+
+[tool.coverage.report]
+fail_under = 90
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [dependency-groups]
 dev = [
+    "coverage>=7.8.2",
     "mypy>=1.16.0",
     "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.1.1",
     "ruff>=0.11.12",
 ]

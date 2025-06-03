@@ -109,3 +109,24 @@ def test_extract_upcs_nonexistent_file() -> None:
     """Test extracting UPCs from nonexistent file."""
     with pytest.raises(FileNotFoundError):
         extract_upcs_from_csv(Path("/nonexistent/file.csv"))
+
+
+def test_extract_upcs_permission_error() -> None:
+    """Test extracting UPCs when permission is denied."""
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".csv", delete=False
+    ) as temp_file:
+        temp_file.write("123456789012,Product A")
+        temp_file.flush()
+        csv_path = Path(temp_file.name)
+
+    # Remove read permission to simulate permission error
+    csv_path.chmod(0o000)
+
+    try:
+        with pytest.raises(RuntimeError, match="Error reading CSV file"):
+            extract_upcs_from_csv(csv_path)
+    finally:
+        # Restore permissions for cleanup
+        csv_path.chmod(0o666)
+        csv_path.unlink()
