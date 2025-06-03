@@ -172,3 +172,149 @@ def test_titles_command_custom_timeout() -> None:
 
             assert result.exit_code == 0
             mock_fetch.assert_called_once_with("123456789012", timeout=5.0)
+
+
+def test_upcs_command_empty_csv() -> None:
+    """Test upcs command with CSV file containing no UPCs."""
+    runner = CliRunner()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        csv_path = Path(temp_dir) / "test.csv"
+        csv_path.write_text("")
+
+        result = runner.invoke(cli, ["upcs", temp_dir])
+
+        assert result.exit_code == 0
+        assert "No UPCs found in the CSV file." in result.output
+
+
+def test_upcs_command_csv_error() -> None:
+    """Test upcs command when CSV processing fails."""
+    runner = CliRunner()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        csv_path = Path(temp_dir) / "test.csv"
+        csv_path.write_text("123456789012,Product A")
+
+        with patch("csv_upc_omg.main.extract_upcs_from_csv") as mock_extract:
+            mock_extract.side_effect = RuntimeError("CSV processing failed")
+
+            result = runner.invoke(cli, ["upcs", temp_dir])
+
+            assert result.exit_code == 1
+            assert "Error processing CSV: CSV processing failed" in result.output
+
+
+def test_upcs_command_file_not_found() -> None:
+    """Test upcs command when directory doesn't exist."""
+    runner = CliRunner()
+
+    # Use a path that click will reject before our code runs
+    result = runner.invoke(cli, ["upcs", "/totally/nonexistent/path"])
+
+    assert result.exit_code == 2  # Click validation error
+    assert "does not exist" in result.output
+
+
+def test_titles_command_empty_csv() -> None:
+    """Test titles command with CSV file containing no UPCs."""
+    runner = CliRunner()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        csv_path = Path(temp_dir) / "test.csv"
+        csv_path.write_text("")
+
+        result = runner.invoke(cli, ["titles", temp_dir])
+
+        assert result.exit_code == 0
+        assert "No UPCs found in the CSV file." in result.output
+
+
+def test_titles_command_csv_error() -> None:
+    """Test titles command when CSV processing fails."""
+    runner = CliRunner()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        csv_path = Path(temp_dir) / "test.csv"
+        csv_path.write_text("123456789012,Product A")
+
+        with patch("csv_upc_omg.main.extract_upcs_from_csv") as mock_extract:
+            mock_extract.side_effect = RuntimeError("CSV processing failed")
+
+            result = runner.invoke(cli, ["titles", temp_dir])
+
+            assert result.exit_code == 1
+            assert "Error processing CSV: CSV processing failed" in result.output
+
+
+def test_titles_command_file_not_found() -> None:
+    """Test titles command when directory doesn't exist."""
+    runner = CliRunner()
+
+    # Use a path that click will reject before our code runs
+    result = runner.invoke(cli, ["titles", "/totally/nonexistent/path"])
+
+    assert result.exit_code == 2  # Click validation error
+    assert "does not exist" in result.output
+
+
+def test_titles_command_verbose_api_error() -> None:
+    """Test titles command with verbose flag when API error occurs."""
+    runner = CliRunner()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        csv_path = Path(temp_dir) / "test.csv"
+        csv_path.write_text("123456789012,Product A")
+
+        with patch("csv_upc_omg.main.fetch_product_title_sync") as mock_fetch:
+            from csv_upc_omg.barcode_lookup import BarcodeAPIError
+
+            mock_fetch.side_effect = BarcodeAPIError("API Error")
+
+            result = runner.invoke(cli, ["titles", temp_dir, "--verbose"])
+
+            assert result.exit_code == 0
+            assert "123456789012: Error - API Error" in result.output
+
+
+def test_main_as_script() -> None:
+    """Test main function execution as script."""
+    with patch("csv_upc_omg.main.cli") as mock_cli:
+        from csv_upc_omg.main import main
+
+        main()
+        mock_cli.assert_called_once()
+
+
+def test_upcs_command_directory_error() -> None:
+    """Test upcs command with internal directory error."""
+    runner = CliRunner()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        csv_path = Path(temp_dir) / "test.csv"
+        csv_path.write_text("123456789012,Product A")
+
+        with patch("csv_upc_omg.main.find_most_recent_csv") as mock_find:
+            mock_find.side_effect = NotADirectoryError("Not a directory")
+
+            result = runner.invoke(cli, ["upcs", temp_dir])
+
+            assert result.exit_code == 1
+            assert "Error: Not a directory" in result.output
+
+
+def test_titles_command_directory_error() -> None:
+    """Test titles command with internal directory error."""
+    runner = CliRunner()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        csv_path = Path(temp_dir) / "test.csv"
+        csv_path.write_text("123456789012,Product A")
+
+        with patch("csv_upc_omg.main.find_most_recent_csv") as mock_find:
+            mock_find.side_effect = NotADirectoryError("Not a directory")
+
+            result = runner.invoke(cli, ["titles", temp_dir])
+
+            assert result.exit_code == 1
+            assert "Error: Not a directory" in result.output

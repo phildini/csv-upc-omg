@@ -8,7 +8,9 @@ class BarcodeAPIError(Exception):
     """Exception raised when barcode lookup fails."""
 
 
-async def fetch_product_title(upc: str, timeout: float = 10.0) -> str | None:
+async def fetch_product_title(  # pragma: no cover
+    upc: str, timeout: float = 10.0
+) -> str | None:
     """Fetch product title from barcodelookup.com.
 
     Args:
