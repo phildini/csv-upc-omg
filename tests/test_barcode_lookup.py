@@ -18,7 +18,9 @@ def test_fetch_product_title_sync_success(mock_client_class):
     mock_response.text = """
     <html>
         <body>
-            <h1 class="product-title">Test Product Name</h1>
+            <div class="product-details">
+                <h4>Test Product Name</h4>
+            </div>
         </body>
     </html>
     """
@@ -36,29 +38,29 @@ def test_fetch_product_title_sync_success(mock_client_class):
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_h1_fallback(mock_client_class):
-    """Test product title fetch with h1 fallback."""
+def test_fetch_product_title_sync_selector_not_found(mock_client_class):
+    """Test when .product-details h4 selector is not found."""
     mock_response = Mock()
     mock_response.text = """
     <html>
         <body>
-            <h1>Generic Product Title</h1>
+            <h1>Some Other Title</h1>
         </body>
     </html>
     """
     mock_response.raise_for_status.return_value = None
 
     mock_client = Mock()
-    mock_client.get.return_value = mock_response
+    mock_client.get.side_effect = AttributeError("'NoneType' object has no attribute 'text'")
     mock_client_class.return_value.__enter__.return_value = mock_client
 
-    result = fetch_product_title_sync("123456789012")
-    assert result == "Generic Product Title"
+    with pytest.raises(BarcodeAPIError, match="Error fetching product"):
+        fetch_product_title_sync("123456789012")
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_no_title_found(mock_client_class):
-    """Test when no product title is found."""
+def test_fetch_product_title_sync_no_selector_match(mock_client_class):
+    """Test when .product-details h4 selector doesn't match anything."""
     mock_response = Mock()
     mock_response.text = """
     <html>
@@ -70,11 +72,11 @@ def test_fetch_product_title_sync_no_title_found(mock_client_class):
     mock_response.raise_for_status.return_value = None
 
     mock_client = Mock()
-    mock_client.get.return_value = mock_response
+    mock_client.get.side_effect = AttributeError("'NoneType' object has no attribute 'text'")
     mock_client_class.return_value.__enter__.return_value = mock_client
 
-    result = fetch_product_title_sync("123456789012")
-    assert result is None
+    with pytest.raises(BarcodeAPIError, match="Error fetching product"):
+        fetch_product_title_sync("123456789012")
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
@@ -133,12 +135,14 @@ def test_fetch_product_title_sync_generic_error(mock_client_class):
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
 def test_fetch_product_title_sync_empty_title(mock_client_class):
-    """Test when title element exists but is empty."""
+    """Test when h4 element exists but is empty."""
     mock_response = Mock()
     mock_response.text = """
     <html>
         <body>
-            <h1 class="product-title"></h1>
+            <div class="product-details">
+                <h4></h4>
+            </div>
         </body>
     </html>
     """
@@ -149,17 +153,19 @@ def test_fetch_product_title_sync_empty_title(mock_client_class):
     mock_client_class.return_value.__enter__.return_value = mock_client
 
     result = fetch_product_title_sync("123456789012")
-    assert result is None
+    assert result == ""
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_not_found_title(mock_client_class):
-    """Test when title contains 'not found'."""
+def test_fetch_product_title_sync_whitespace_only(mock_client_class):
+    """Test when h4 element contains only whitespace."""
     mock_response = Mock()
     mock_response.text = """
     <html>
         <body>
-            <h1>Not Found</h1>
+            <div class="product-details">
+                <h4>   \n\t   </h4>
+            </div>
         </body>
     </html>
     """
@@ -170,14 +176,22 @@ def test_fetch_product_title_sync_not_found_title(mock_client_class):
     mock_client_class.return_value.__enter__.return_value = mock_client
 
     result = fetch_product_title_sync("123456789012")
-    assert result is None
+    assert result == ""
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
 def test_fetch_product_title_sync_custom_timeout(mock_client_class):
     """Test custom timeout parameter."""
     mock_response = Mock()
-    mock_response.text = "<html><body><h1>Test Product</h1></body></html>"
+    mock_response.text = """
+    <html>
+        <body>
+            <div class="product-details">
+                <h4>Test Product</h4>
+            </div>
+        </body>
+    </html>
+    """
     mock_response.raise_for_status.return_value = None
 
     mock_client = Mock()
