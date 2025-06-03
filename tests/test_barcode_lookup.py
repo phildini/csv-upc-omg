@@ -189,5 +189,3 @@ def test_fetch_product_title_sync_custom_timeout(mock_client_class):
 
     # Verify timeout was passed to client
     mock_client_class.assert_called_once_with(timeout=5.0)
-
-
