@@ -13,7 +13,13 @@ uv pip install -e .
 For development:
 
 ```bash
-uv pip install -e ".[dev]"
+uv sync --all-extras
+```
+
+Set up pre-commit hooks (recommended):
+
+```bash
+uv run pre-commit install
 ```
 
 ## Usage
@@ -27,20 +33,26 @@ csv-upc-omg --help
 Run tests:
 
 ```bash
-pytest
+uv run pytest
 ```
 
 Format and lint code:
 
 ```bash
-ruff format .
-ruff check .
+uv run ruff format .
+uv run ruff check .
 ```
 
 Type checking:
 
 ```bash
-mypy src/
+uv run mypy src/
+```
+
+Run all quality checks:
+
+```bash
+uv run pre-commit run --all-files
 ```
 
 ## License
