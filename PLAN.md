@@ -1,19 +1,30 @@
-# Final Implementation Plan: Django App with ImmediateBackend
+# Implementation Plan: Inventory Tracking Django App
 
-## Architecture Overview
+## Overview
 
-**Monorepo structure** - `src/` (core library) stays unchanged, `web/` (Django) wraps and reuses it. Tasks defined with Django's `@task` decorator. With `ImmediateBackend`, tasks run synchronously in the same process, which simplifies the initial implementation. Easy to swap to a real backend later without refactoring task code.
+A Django web app that wraps the existing `csv-upc-omg` core library for tracking household inventory via UPC barcode lookups. Users upload CSV files containing UPCs, the system looks up product information, and stores results so users can track what they have at home.
+
+**Monorepo structure** - `src/` (core library) stays unchanged, `web/` (Django project with `inventory` app) wraps and reuses it. Tasks defined with Django's `@task` decorator and `django-tasks` package (backport of Django 6.0's tasks framework for Django 5.2). Using `ImmediateBackend` initially for simplicity - tasks run synchronously in the same process. Easy to swap to a real backend later without refactoring task code.
+
+## Long-term Goal
+
+Track your household inventory by:
+1. Uploading CSV files with UPC barcodes
+2. Looking up product details automatically
+3. Building a database of everything you own
+4. Searching, filtering, and managing your inventory
+5. Getting insights (duplicates, what's running low, etc.)
 
 ```
 csv-upc-omg/
-├── src/                               # EXISTING - no changes
+├── src/                               # EXISTING - core library
 │   └── csv_upc_omg/
 │       ├── __init__.py
 │       ├── barcode_lookup.py
 │       ├── csv_utils.py
 │       └── main.py
-├── tests/                             # EXISTING - no changes
-├── web/                               # NEW: Django project
+├── tests/                             # EXISTING
+├── web/                               # Django project
 │   ├── manage.py
 │   ├── config/
 │   │   ├── __init__.py
@@ -25,7 +36,7 @@ csv-upc-omg/
 │   │   ├── urls.py
 │   │   ├── wsgi.py
 │   │   └── asgi.py
-│   └── core_app/                      # NEW: Django app
+│   └── inventory/                     # Django app for inventory tracking
 │       ├── __init__.py
 │       ├── apps.py
 │       ├── models.py
@@ -37,8 +48,8 @@ csv-upc-omg/
 │       ├── tasks.py
 │       ├── management/
 │       │   └── commands/
-│       │       ├── process_csv.py
-│       │       └── lookup_batch.py
+│       │       ├── upcs.py
+│       │       └── titles.py
 │       ├── templates/
 │       │   ├── base.html
 │       │   ├── dashboard/
@@ -53,6 +64,7 @@ csv-upc-omg/
 │       │   └── css/
 │       │       └── main.css
 │       ├── api/
+│       │   ├── __init__.py
 │       │   ├── urls.py
 │       │   ├── serializers.py
 │       │   └── views.py
@@ -64,17 +76,17 @@ csv-upc-omg/
 ├── .env.example
 ├── Dockerfile
 ├── docker-compose.yml
-└── pyproject.toml                     # Add Django deps
+└── pyproject.toml
 ```
 
 ---
 
-## New Dependencies (added to `pyproject.toml`)
+## Dependencies (added to `pyproject.toml`)
 
 ```toml
 [project.optional-dependencies]
 web = [
-    "django>=6.0",
+    "django>=5.2,<6.0",
     "django-environ>=0.11",
     "djangorestframework>=3.14",
     "django-tables2>=2.6",
@@ -84,10 +96,11 @@ web = [
     "gunicorn>=21",
     "whitenoise>=6.6",
     "django-debug-toolbar>=4.0",
+    "django-tasks>=0.3,<1.0",
 ]
 ```
 
-Note: `asgiref` comes as a Django dependency. `csv-upc-omg` core library dependencies (`beautifulsoup4`, `click`, `httpx`) are already defined in the project's main dependencies.
+Note: `django-tasks` is the backport of Django 6.0's tasks framework for Django 5.2. It provides the same API so we can upgrade later seamlessly.
 
 ---
 
@@ -583,7 +596,7 @@ INSTALLED_APPS = [
     'django_tables2',
     'django_filters',
     'django_htmx',
-    'core_app',
+    "inventory",
 ]
 
 MIDDLEWARE = [
@@ -602,11 +615,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # Tasks
-TASKS = {
-    "default": {
-        "BACKEND": "django.tasks.backends.immediate.ImmediateBackend"
-    }
-}
+TASKS = {"default": {"BACKEND": "django_tasks.backends.immediate.ImmediateBackend"}}
 
 # Auth
 LOGIN_URL = '/admin/login/'
@@ -708,8 +717,8 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('core_app.urls')),
-    path('api/v1/', include('core_app.api.urls')),
+    path('', include('inventory.urls')),
+    path('api/v1/', include('inventory.api.urls')),
 ]
 
 if settings.DEBUG:
@@ -720,7 +729,7 @@ if settings.DEBUG:
     ] + urlpatterns
 ```
 
-### `core_app/urls.py`
+### `inventory/urls.py`
 ```python
 from django.urls import path
 from . import views
@@ -735,7 +744,7 @@ urlpatterns = [
 ]
 ```
 
-### `core_app/api/urls.py`
+### `inventory/api/urls.py`
 ```python
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
@@ -796,7 +805,7 @@ Mirror existing CLI functionality through Django:
 ### `process_csv` command
 ```python
 from django.core.management.base import BaseCommand
-from core_app.services import UploadService
+from inventory.services import UploadService
 
 class Command(BaseCommand):
     help = 'Process a CSV file directly (wrapper around existing CLI)'
