@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Inventory{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col">
+      <h2>Inventory Dashboard</h2>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Total Uploads</h5>
+          <p class="card-text display-4">{{ stats.total_uploads }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Total Lookups</h5>
+          <p class="card-text display-4">{{ stats.total_lookups }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Success Rate</h5>
+          <p class="card-text display-4">{{ stats.success_rate|floatformat:1 }}%</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mt-4">
+    <div class="col">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Recent Uploads</h5>
+        </div>
+        <div class="card-body">
+          {% if stats.recent_uploads %}
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Filename</th>
+                  <th>Status</th>
+                  <th>Total Rows</th>
+                  <th>Processed</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for upload in stats.recent_uploads %}
+                <tr>
+                  <td>{{ upload.filename }}</td>
+                  <td>
+                    <span class="badge bg-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}danger{% elif upload.status == 'processing' %}warning{% else %}secondary{% endif %}">
+                      {{ upload.get_status_display }}
+                    </span>
+                  </td>
+                  <td>{{ upload.total_rows }}</td>
+                  <td>{{ upload.processed_rows }}</td>
+                  <td>{{ upload.created_at|date:"Y-m-d H:i" }}</td>
+                  <td>
+                    <a href="{% url 'upload-detail' upload.id %}" class="btn btn-sm btn-outline-primary">
+                      View
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted">No uploads yet. <a href="{% url 'upload-create' %}">Upload your first CSV</a></p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

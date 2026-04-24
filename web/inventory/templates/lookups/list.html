@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Lookups - Inventory{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col">
+      <h2>All Lookups</h2>
+    </div>
+    <div class="col-auto">
+      <form method="get" class="d-flex">
+        <select
+          name="status"
+          class="form-select me-2"
+          onchange="this.form.submit()"
+        >
+          <option value="">All Statuses</option>
+          <option value="success" {% if request.GET.status == "success" %}selected{% endif %}>
+            Success
+          </option>
+          <option value="not_found" {% if request.GET.status == "not_found" %}selected{% endif %}>
+            Not Found
+          </option>
+          <option value="failed" {% if request.GET.status == "failed" %}selected{% endif %}>
+            Failed
+          </option>
+          <option value="pending" {% if request.GET.status == "pending" %}selected{% endif %}>
+            Pending
+          </option>
+        </select>
+      </form>
+    </div>
+  </div>
+
+  {% if table %}
+  <div class="card">
+    <div class="card-body p-0">
+      {% render_table table %}
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    <p class="mb-0">No lookup records found.</p>
+    <a href="{% url 'upload-create' %}" class="btn btn-primary mt-3"
+      >Upload a CSV</a
+    >
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
