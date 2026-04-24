@@ -2,6 +2,7 @@
 
 import csv
 import io
+from pathlib import Path
 
 from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
@@ -18,7 +19,8 @@ class UploadService:
     @staticmethod
     def process_upload(upload: CSVUpload) -> int:
         """Read CSV, create LookupRecords, return count of UPCs found."""
-        upcs = extract_upcs_from_csv(upload.file.path)
+        file_path = Path(upload.file.path)
+        upcs = extract_upcs_from_csv(file_path)
         upload.total_rows = len(upcs)
         upload.save(update_fields=["total_rows"])
 
