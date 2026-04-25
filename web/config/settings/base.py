@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "django_tables2",
     "django_filters",
     "django_htmx",
+    "bulma",
     "inventory",
 ]
 
@@ -47,6 +48,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -124,4 +126,4 @@ REST_FRAMEWORK = {
     ],
 }
 
-DJANGO_TABLES2_TEMPLATE = "django_tables2/bootstrap5.html"
+DJANGO_TABLES2_TEMPLATE = "django_tables2/table.html"

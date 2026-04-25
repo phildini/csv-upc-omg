@@ -3,90 +3,66 @@
 {% block title %}Dashboard - Inventory{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-  <div class="row mb-4">
-    <div class="col">
-      <h2>Inventory Dashboard</h2>
+<h1 class="title">Inventory Dashboard</h1>
+
+<div class="columns">
+  <div class="column">
+    <div class="notification has-text-centered">
+      <p class="heading">Total Uploads</p>
+      <p class="title">{{ stats.total_uploads }}</p>
     </div>
   </div>
 
-  <div class="row g-3">
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Total Uploads</h5>
-          <p class="card-text display-4">{{ stats.total_uploads }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Total Lookups</h5>
-          <p class="card-text display-4">{{ stats.total_lookups }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title">Success Rate</h5>
-          <p class="card-text display-4">{{ stats.success_rate|floatformat:1 }}%</p>
-        </div>
-      </div>
+  <div class="column">
+    <div class="notification has-text-centered">
+      <p class="heading">Total Lookups</p>
+      <p class="title">{{ stats.total_lookups }}</p>
     </div>
   </div>
 
-  <div class="row mt-4">
-    <div class="col">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Recent Uploads</h5>
-        </div>
-        <div class="card-body">
-          {% if stats.recent_uploads %}
-          <div class="table-responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Filename</th>
-                  <th>Status</th>
-                  <th>Total Rows</th>
-                  <th>Processed</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for upload in stats.recent_uploads %}
-                <tr>
-                  <td>{{ upload.filename }}</td>
-                  <td>
-                    <span class="badge bg-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}danger{% elif upload.status == 'processing' %}warning{% else %}secondary{% endif %}">
-                      {{ upload.get_status_display }}
-                    </span>
-                  </td>
-                  <td>{{ upload.total_rows }}</td>
-                  <td>{{ upload.processed_rows }}</td>
-                  <td>{{ upload.created_at|date:"Y-m-d H:i" }}</td>
-                  <td>
-                    <a href="{% url 'upload-detail' upload.id %}" class="btn btn-sm btn-outline-primary">
-                      View
-                    </a>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% else %}
-          <p class="text-muted">No uploads yet. <a href="{% url 'upload-create' %}">Upload your first CSV</a></p>
-          {% endif %}
-        </div>
-      </div>
+  <div class="column">
+    <div class="notification has-text-centered">
+      <p class="heading">Success Rate</p>
+      <p class="title">{{ stats.success_rate|floatformat:1 }}%</p>
     </div>
   </div>
+</div>
+
+<div class="box">
+  <h2 class="title is-4">Recent Uploads</h2>
+  {% if stats.recent_uploads %}
+  <table class="table is-fullwidth is-striped is-hoverable">
+    <thead>
+      <tr>
+        <th>Filename</th>
+        <th>Status</th>
+        <th>Rows</th>
+        <th>Processed</th>
+        <th>Created</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for upload in stats.recent_uploads %}
+      <tr>
+        <td>{{ upload.filename }}</td>
+        <td>
+          <span class="tag is-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}danger{% elif upload.status == 'processing' %}warning{% else %}light{% endif %}">
+            {{ upload.get_status_display }}
+          </span>
+        </td>
+        <td>{{ upload.total_rows }}</td>
+        <td>{{ upload.processed_rows }}</td>
+        <td>{{ upload.created_at|date:"M d, Y H:i" }}</td>
+        <td>
+          <a href="{% url 'upload-detail' upload.id %}" class="button is-small is-info is-outlined">View</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="has-text-grey mt-4">No uploads yet. <a href="{% url 'upload-create' %}">Upload your first CSV</a></p>
+  {% endif %}
 </div>
 {% endblock %}

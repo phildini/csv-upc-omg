@@ -1,114 +1,95 @@
 {% extends "base.html" %}
+{% load django_tables2 %}
+
 {% block title %}{{ upload.filename }} - Inventory{% endblock %}
+
 {% block content %}
-<div class="container-fluid">
-  <div class="row mb-4">
-    <div class="col-6">
-      <h2>{{ upload.filename }}</h2>
-    </div>
-    <div class="col-6 text-end">
-      {% if upload.status == "completed" %}
-      <a href="{% url 'upload-export' upload.id %}" class="btn btn-success">
-        Export CSV
-      </a>
-      {% else %}
-      <button class="btn btn-secondary" disabled>Export (Not Ready)</button>
-      {% endif %}
+<div class="level">
+  <div class="level-left">
+    <h2 class="title">{{ upload.filename }}</h2>
+  </div>
+  <div class="level-right">
+    {% if upload.status == "completed" %}
+    <a href="{% url 'upload-export' upload.id %}" class="button is-success">
+      Export CSV
+    </a>
+    {% else %}
+    <button class="button is-disabled" disabled>Export (Not Ready)</button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="columns is-multiline">
+  <div class="column is-3">
+    <div class="box has-text-centered">
+      <h6 class="subtitle is-6">Status</h6>
+      <span class="tag is-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}danger{% elif upload.status == 'processing' %}warning{% else %}light{% endif %} is-large">
+        {{ upload.get_status_display }}
+      </span>
     </div>
   </div>
 
-  <div class="row mb-3">
-    <div class="col-md-3">
-      <div class="card">
-        <div class="card-body">
-          <h6>Status</h6>
-          <p class="mb-0">
-            <span
-              class="badge bg-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}danger{% elif upload.status == 'processing' %}warning{% else %}secondary{% endif %}"
-            >
-              {{ upload.get_status_display }}
-            </span>
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card">
-        <div class="card-body">
-          <h6>Total Rows</h6>
-          <p class="mb-0 display-6">{{ upload.total_rows }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card">
-        <div class="card-body">
-          <h6>Processed</h6>
-          <p class="mb-0 display-6">{{ upload.processed_rows }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="card">
-        <div class="card-body">
-          <h6>Created</h6>
-          <p class="mb-0">{{ upload.created_at|date:"Y-m-d H:i" }}</p>
-        </div>
-      </div>
+  <div class="column is-3">
+    <div class="box has-text-centered">
+      <h6 class="subtitle is-6">Total Rows</h6>
+      <p class="title is-2">{{ upload.total_rows }}</p>
     </div>
   </div>
 
-  {% if upload.error_message %}
-  <div class="alert alert-danger">
+  <div class="column is-3">
+    <div class="box has-text-centered">
+      <h6 class="subtitle is-6">Processed</h6>
+      <p class="title is-2">{{ upload.processed_rows }}</p>
+    </div>
+  </div>
+
+  <div class="column is-3">
+    <div class="box has-text-centered">
+      <h6 class="subtitle is-6">Created</h6>
+      <p>{{ upload.created_at|date:"Y-m-d H:i" }}</p>
+    </div>
+  </div>
+</div>
+
+{% if upload.error_message %}
+<article class="message is-danger">
+  <div class="message-body">
     <strong>Error:</strong> {{ upload.error_message }}
   </div>
-  {% endif %}
+</article>
+{% endif %}
 
-  <div class="row">
-    <div class="col">
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Lookup Records</h5>
-        </div>
-        <div class="card-body">
-          {% if lookups %}
-          <div class="table-responsive">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>UPC</th>
-                  <th>Product Title</th>
-                  <th>Status</th>
-                  <th>Error</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for lookup in lookups %}
-                <tr>
-                  <td><code>{{ lookup.upc }}</code></td>
-                  <td>{{ lookup.product_title|default:"<span class='text-muted'>Not found</span> "|safe }}</td>
-                  <td>
-                    <span
-                      class="badge bg-{% if lookup.status == 'success' %}success{% elif lookup.status == 'failed' %}danger{% elif lookup.status == 'not_found' %}warning{% else %}secondary{% endif %}"
-                    >
-                      {{ lookup.get_status_display }}
-                    </span>
-                  </td>
-                  <td>{{ lookup.error_message|default:"-" }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% else %}
-          <p class="text-muted">No lookup records for this upload.</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
+<div class="box">
+  <h5 class="title is-5">Lookup Records</h5>
+  {% if lookups %}
+  <div class="table-container">
+    <table class="table is-fullwidth is-striped is-hoverable">
+      <thead>
+        <tr>
+          <th>UPC</th>
+          <th>Product Title</th>
+          <th>Status</th>
+          <th>Error</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lookup in lookups %}
+        <tr>
+          <td><code>{{ lookup.upc }}</code></td>
+          <td>{{ lookup.product_title|default:"<span class='has-text-grey'>Not found</span>"|safe }}</td>
+          <td>
+            <span class="tag is-{% if lookup.status == 'success' %}success{% elif lookup.status == 'failed' %}danger{% elif lookup.status == 'not_found' %}warning{% else %}light{% endif %}">
+              {{ lookup.get_status_display }}
+            </span>
+          </td>
+          <td>{{ lookup.error_message|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
+  {% else %}
+  <p class="has-text-grey">No lookup records for this upload.</p>
+  {% endif %}
 </div>
 {% endblock %}

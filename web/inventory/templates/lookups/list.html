@@ -1,49 +1,48 @@
 {% extends "base.html" %}
-{% block title %}Lookups - Inventory{% endblock %}
-{% block content %}
-<div class="container-fluid">
-  <div class="row mb-4">
-    <div class="col">
-      <h2>All Lookups</h2>
-    </div>
-    <div class="col-auto">
-      <form method="get" class="d-flex">
-        <select
-          name="status"
-          class="form-select me-2"
-          onchange="this.form.submit()"
-        >
-          <option value="">All Statuses</option>
-          <option value="success" {% if request.GET.status == "success" %}selected{% endif %}>
-            Success
-          </option>
-          <option value="not_found" {% if request.GET.status == "not_found" %}selected{% endif %}>
-            Not Found
-          </option>
-          <option value="failed" {% if request.GET.status == "failed" %}selected{% endif %}>
-            Failed
-          </option>
-          <option value="pending" {% if request.GET.status == "pending" %}selected{% endif %}>
-            Pending
-          </option>
-        </select>
-      </form>
-    </div>
-  </div>
+{% load django_tables2 %}
 
-  {% if table %}
-  <div class="card">
-    <div class="card-body p-0">
-      {% render_table table %}
-    </div>
+{% block title %}Lookups - Inventory{% endblock %}
+
+{% block content %}
+<div class="level">
+  <div class="level-left">
+    <h2 class="title">All Lookups</h2>
   </div>
-  {% else %}
-  <div class="alert alert-info">
-    <p class="mb-0">No lookup records found.</p>
-    <a href="{% url 'upload-create' %}" class="btn btn-primary mt-3"
-      >Upload a CSV</a
-    >
+  <div class="level-right">
+    <form method="get" class="field is-grouped">
+      <div class="control">
+        <div class="select">
+          <select name="status" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="success" {% if request.GET.status == "success" %}selected{% endif %}>
+              Success
+            </option>
+            <option value="not_found" {% if request.GET.status == "not_found" %}selected{% endif %}>
+              Not Found
+            </option>
+            <option value="failed" {% if request.GET.status == "failed" %}selected{% endif %}>
+              Failed
+            </option>
+            <option value="pending" {% if request.GET.status == "pending" %}selected{% endif %}>
+              Pending
+            </option>
+          </select>
+        </div>
+      </div>
+    </form>
   </div>
-  {% endif %}
 </div>
+
+{% if table %}
+<div class="box">
+  {% render_table table %}
+</div>
+{% else %}
+<article class="message is-info">
+  <div class="message-body">
+    No lookup records found.
+    <a href="{% url 'upload-create' %}" class="button is-primary">Upload a CSV</a>
+  </div>
+</article>
+{% endif %}
 {% endblock %}

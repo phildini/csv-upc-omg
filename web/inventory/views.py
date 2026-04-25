@@ -22,9 +22,14 @@ def dashboard(request):
     return render(request, "dashboard/index.html", {"stats": stats})
 
 
-class UploadListView(LoginRequiredMixin, ListView):
+class UploadListView(LoginRequiredMixin, SingleTableView):
     model = CSVUpload
     template_name = "uploads/list.html"
+    table_class = UploadTable
+    table_pagination = {"per_page": 15}
+
+    def get_queryset(self):
+        return CSVUpload.objects.filter(user=self.request.user)
 
     def get_queryset(self):
         return CSVUpload.objects.filter(user=self.request.user)

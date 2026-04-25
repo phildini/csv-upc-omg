@@ -1,26 +1,27 @@
-{% extends "base.html" %} {% load django_tables2 %} {% block title %}Uploads -
-Inventory{% endblock %} {% block content %}
-<div class="container-fluid">
-  <div class="row mb-4">
-    <div class="col-6">
-      <h2>CSV Uploads</h2>
-    </div>
-    <div class="col-6 text-end">
-      <a href="{% url 'upload-create' %}" class="btn btn-primary"
-        >Upload New CSV</a
-      >
-    </div>
-  </div>
+{% extends "base.html" %}
+{% load django_tables2 %}
 
-  {% if table %} {% render_table table %} {% else %}
-  <div class="card">
-    <div class="card-body">
-      <p class="text-muted">No uploads yet.</p>
-      <a href="{% url 'upload-create' %}" class="btn btn-primary"
-        >Upload your first CSV</a
-      >
-    </div>
+{% block title %}Uploads - Inventory{% endblock %}
+
+{% block content %}
+<div class="level">
+  <div class="level-left">
+    <h1 class="title">CSV Uploads</h1>
   </div>
-  {% endif %}
+  <div class="level-right">
+    <a href="{% url 'upload-create' %}" class="button is-primary">
+      <span class="icon"><i class="fas fa-upload"></i></span>
+      <span>Upload New CSV</span>
+    </a>
+  </div>
 </div>
+
+{% if table %}
+  {% render_table table %}
+{% else %}
+<div class="box has-text-centered">
+  <p class="has-text-grey">No uploads yet.</p>
+  <a href="{% url 'upload-create' %}" class="button is-primary">Upload your first CSV</a>
+</div>
+{% endif %}
 {% endblock %}

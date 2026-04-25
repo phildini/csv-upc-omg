@@ -17,7 +17,7 @@ class UploadTable(tables.Table):
     class Meta:
         model = CSVUpload
         fields = ("filename", "status", "total_rows", "processed_rows", "created_at")
-        attrs = {"class": "table table-striped table-hover"}
+        attrs = {"class": "table is-striped is-hoverable is-fullwidth"}
         order_by = "-created_at"
 
 
@@ -37,5 +37,5 @@ class LookupTable(tables.Table):
     class Meta:
         model = LookupRecord
         fields = ("upc", "product_title", "status", "csv_upload", "created_at")
-        attrs = {"class": "table table-striped table-hover"}
+        attrs = {"class": "table is-striped is-hoverable is-fullwidth"}
         order_by = "-created_at"
