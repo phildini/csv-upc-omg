@@ -35,9 +35,11 @@ INSTALLED_APPS = [
     "django_tables2",
     "django_filters",
     "django_htmx",
-    "bulma",
+    "django_tailwind_cli",
     "inventory",
 ]
+
+TAILWIND_APP_NAME = "inventory"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -102,6 +104,11 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [
+    BASE_DIR / "assets",
+]
+
+TAILWIND_CLI_USE_DAISY_UI = True
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

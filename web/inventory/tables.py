@@ -4,6 +4,7 @@ import django_tables2 as tables
 from django.template import Template
 from .models import CSVUpload, LookupRecord
 
+
 class UploadTable(tables.Table):
     filename = tables.Column(linkify=("upload-detail", {"pk": tables.A("id")}))
     status = tables.Column()
@@ -17,7 +18,7 @@ class UploadTable(tables.Table):
     class Meta:
         model = CSVUpload
         fields = ("filename", "status", "total_rows", "processed_rows", "created_at")
-        attrs = {"class": "table is-striped is-hoverable is-fullwidth"}
+        attrs = {"class": "table table-zebra w-full"}
         order_by = "-created_at"
 
 
@@ -37,5 +38,5 @@ class LookupTable(tables.Table):
     class Meta:
         model = LookupRecord
         fields = ("upc", "product_title", "status", "csv_upload", "created_at")
-        attrs = {"class": "table is-striped is-hoverable is-fullwidth"}
+        attrs = {"class": "table table-zebra w-full"}
         order_by = "-created_at"

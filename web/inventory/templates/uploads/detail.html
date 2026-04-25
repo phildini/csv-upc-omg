@@ -1,95 +1,91 @@
 {% extends "base.html" %}
-{% load django_tables2 %}
 
-{% block title %}{{ upload.filename }} - Inventory{% endblock %}
+{% block title %}{{ upload.filename }} — csv-upc-omg{% endblock %}
 
 {% block content %}
-<div class="level">
-  <div class="level-left">
-    <h2 class="title">{{ upload.filename }}</h2>
-  </div>
-  <div class="level-right">
-    {% if upload.status == "completed" %}
-    <a href="{% url 'upload-export' upload.id %}" class="button is-success">
-      Export CSV
-    </a>
-    {% else %}
-    <button class="button is-disabled" disabled>Export (Not Ready)</button>
-    {% endif %}
-  </div>
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+  <h1 class="text-3xl font-bold">{{ upload.filename }}</h1>
+  {% if upload.status == "completed" %}
+  <a href="{% url 'upload-export' upload.id %}" class="btn btn-success">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+    Export CSV
+  </a>
+  {% else %}
+  <button class="btn btn-disabled">Export (Not Ready)</button>
+  {% endif %}
 </div>
 
-<div class="columns is-multiline">
-  <div class="column is-3">
-    <div class="box has-text-centered">
-      <h6 class="subtitle is-6">Status</h6>
-      <span class="tag is-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}danger{% elif upload.status == 'processing' %}warning{% else %}light{% endif %} is-large">
+{# Status Cards #}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body items-center text-center py-4">
+      <span class="text-xs uppercase tracking-wide text-base-content/60">Status</span>
+      <div class="badge badge-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}error{% elif upload.status == 'processing' %}warning{% else %}ghost{% endif %} badge-lg mt-2">
         {{ upload.get_status_display }}
-      </span>
+      </div>
     </div>
   </div>
-
-  <div class="column is-3">
-    <div class="box has-text-centered">
-      <h6 class="subtitle is-6">Total Rows</h6>
-      <p class="title is-2">{{ upload.total_rows }}</p>
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body items-center text-center py-4">
+      <span class="text-xs uppercase tracking-wide text-base-content/60">Total Rows</span>
+      <p class="text-2xl font-bold mt-1">{{ upload.total_rows }}</p>
     </div>
   </div>
-
-  <div class="column is-3">
-    <div class="box has-text-centered">
-      <h6 class="subtitle is-6">Processed</h6>
-      <p class="title is-2">{{ upload.processed_rows }}</p>
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body items-center text-center py-4">
+      <span class="text-xs uppercase tracking-wide text-base-content/60">Processed</span>
+      <p class="text-2xl font-bold mt-1">{{ upload.processed_rows }}</p>
     </div>
   </div>
-
-  <div class="column is-3">
-    <div class="box has-text-centered">
-      <h6 class="subtitle is-6">Created</h6>
-      <p>{{ upload.created_at|date:"Y-m-d H:i" }}</p>
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body items-center text-center py-4">
+      <span class="text-xs uppercase tracking-wide text-base-content/60">Created</span>
+      <p class="text-sm mt-2">{{ upload.created_at|date:"M d, Y H:i" }}</p>
     </div>
   </div>
 </div>
 
 {% if upload.error_message %}
-<article class="message is-danger">
-  <div class="message-body">
-    <strong>Error:</strong> {{ upload.error_message }}
-  </div>
-</article>
+<div role="alert" class="alert alert-error mb-6">
+  <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+  <span>{{ upload.error_message }}</span>
+</div>
 {% endif %}
 
-<div class="box">
-  <h5 class="title is-5">Lookup Records</h5>
-  {% if lookups %}
-  <div class="table-container">
-    <table class="table is-fullwidth is-striped is-hoverable">
-      <thead>
-        <tr>
-          <th>UPC</th>
-          <th>Product Title</th>
-          <th>Status</th>
-          <th>Error</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for lookup in lookups %}
-        <tr>
-          <td><code>{{ lookup.upc }}</code></td>
-          <td>{{ lookup.product_title|default:"<span class='has-text-grey'>Not found</span>"|safe }}</td>
-          <td>
-            <span class="tag is-{% if lookup.status == 'success' %}success{% elif lookup.status == 'failed' %}danger{% elif lookup.status == 'not_found' %}warning{% else %}light{% endif %}">
-              {{ lookup.get_status_display }}
-            </span>
-          </td>
-          <td>{{ lookup.error_message|default:"-" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{# Lookup Records #}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title mb-4">Lookup Records</h2>
+    {% if lookups %}
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>UPC</th>
+            <th>Product Title</th>
+            <th>Status</th>
+            <th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lookup in lookups %}
+          <tr class="hover">
+            <td><code class="text-sm">{{ lookup.upc }}</code></td>
+            <td>{{ lookup.product_title|default:"<span class='text-base-content/40'>Not found</span>"|safe }}</td>
+            <td>
+              <div class="badge badge-{% if lookup.status == 'success' %}success{% elif lookup.status == 'failed' %}error{% elif lookup.status == 'not_found' %}warning{% else %}ghost{% endif %} gap-1">
+                {{ lookup.get_status_display }}
+              </div>
+            </td>
+            <td class="text-sm">{{ lookup.error_message|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-base-content/60">No lookup records for this upload.</p>
+    {% endif %}
   </div>
-  {% else %}
-  <p class="has-text-grey">No lookup records for this upload.</p>
-  {% endif %}
 </div>
 {% endblock %}
