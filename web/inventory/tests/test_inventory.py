@@ -1,4 +1,5 @@
 """Tests for the inventory Django app."""
+
 import uuid
 
 from django.contrib.auth.models import User
@@ -136,9 +137,7 @@ class ViewTests(TestCase):
     """Test inventory views require authentication."""
 
     def setUp(self):
-        self.user = User.objects.create_user(
-            username="testuser", password="testpass"
-        )
+        self.user = User.objects.create_user(username="testuser", password="testpass")
         self.client.login(username="testuser", password="testpass")
 
     def test_dashboard_requires_login(self):

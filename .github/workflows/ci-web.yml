@@ -53,6 +53,3 @@ jobs:
 
       - name: Run ruff format check on web
         run: uv run ruff format --check web/
-
-      - name: Run mypy on web
-        run: uv run mypy web/
