@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load django_tables2 %}
+
+{% block title %}Lookups — csv-upc-omg{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+  <h1 class="text-3xl font-bold">All Lookups</h1>
+  <form method="get" class="form-control">
+    <select name="status" class="select select-bordered select-sm" onchange="this.form.submit()">
+      <option value="">All Statuses</option>
+      <option value="success" {% if request.GET.status == "success" %}selected{% endif %}>Success</option>
+      <option value="not_found" {% if request.GET.status == "not_found" %}selected{% endif %}>Not Found</option>
+      <option value="failed" {% if request.GET.status == "failed" %}selected{% endif %}>Failed</option>
+      <option value="pending" {% if request.GET.status == "pending" %}selected{% endif %}>Pending</option>
+    </select>
+  </form>
+</div>
+
+{% if table %}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-0">
+    {% render_table table %}
+  </div>
+</div>
+{% else %}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body items-center text-center">
+    <p class="text-base-content/60">No lookup records found.</p>
+    <a href="{% url 'upload-create' %}" class="btn btn-primary mt-4">Upload a CSV</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,66 @@
+/* Inventory - Main Styles */
+
+.card {
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.display-4 {
+  font-size: 2.5rem;
+  font-weight: 300;
+  line-height: 1.2;
+}
+
+.display-6 {
+  font-size: 1.75rem;
+  font-weight: 300;
+  line-height: 1.2;
+}
+
+/* Table styling */
+.table > :not(caption) > * > * {
+  padding: 0.75rem 1rem;
+}
+
+/* Status badges */
+.badge {
+  font-size: 0.875rem;
+  padding: 0.35em 0.65em;
+}
+
+/* Upload form */
+form input[type="file"] {
+  padding: 0.5rem;
+}
+
+/* Navigation active state */
+.navbar-nav .nav-link.active {
+  color: #fff !important;
+  font-weight: 500;
+}
+
+/* HTMX indicators */
+.htmx-request .spinner {
+  display: inline-block;
+}
+
+.htmx-request {
+  opacity: 0.7;
+}
+
+/* Code styling for UPCs */
+code {
+  background-color: #f8f9fa;
+  color: #212529;
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+  .display-4 {
+    font-size: 2rem;
+  }
+  .display-6 {
+    font-size: 1.5rem;
+  }
+}

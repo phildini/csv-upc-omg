@@ -47,6 +47,7 @@ web = [
     "whitenoise>=6.6",
     "django-debug-toolbar>=4.0",
     "django-tasks>=0.3,<1.0",
+    "django-tailwind-cli>=4.6",
 ]
 
 [build-system]

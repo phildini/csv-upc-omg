@@ -6,12 +6,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView, ListView
-from django_tables2 import SingleTableView, Table
+from django.views.generic import CreateView, DetailView
+from django_tables2 import SingleTableView
 
 from .forms import UploadForm
 from .models import CSVUpload, LookupRecord
 from .services import UploadService
+from .tables import LookupTable, UploadTable
 from .tasks import lookup_batch_task, process_csv_task
 
 
@@ -21,9 +22,11 @@ def dashboard(request):
     return render(request, "dashboard/index.html", {"stats": stats})
 
 
-class UploadListView(LoginRequiredMixin, ListView):
+class UploadListView(LoginRequiredMixin, SingleTableView):
     model = CSVUpload
     template_name = "uploads/list.html"
+    table_class = UploadTable
+    table_pagination = {"per_page": 15}
 
     def get_queryset(self):
         return CSVUpload.objects.filter(user=self.request.user)
@@ -91,7 +94,7 @@ class UploadExportView(LoginRequiredMixin, DetailView):
 class LookupListView(LoginRequiredMixin, SingleTableView):
     model = LookupRecord
     template_name = "lookups/list.html"
-    table_class = Table
+    table_class = LookupTable
 
     def get_queryset(self):
         return LookupRecord.objects.filter(

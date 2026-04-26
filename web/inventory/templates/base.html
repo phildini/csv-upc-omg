@@ -1,0 +1,104 @@
+{% load tailwind_cli %}
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}csv-upc-omg{% endblock %}</title>
+    {% tailwind_css %}
+    <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
+    {% block extra_head %}{% endblock %}
+  </head>
+  <body class="min-h-screen flex flex-col bg-base-200">
+
+    {# Navbar #}
+    <div class="navbar bg-base-100 shadow-sm px-4">
+      {# Start: hamburger + brand #}
+      <div class="flex-1">
+        <div class="dropdown">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-square lg:hidden" id="mobile-toggle">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </div>
+          <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow" id="mobile-menu">
+            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url 'upload-list' %}">Uploads</a></li>
+            <li><a href="{% url 'lookup-list' %}">Lookups</a></li>
+          </ul>
+        </div>
+
+        <a href="{% url 'dashboard' %}" class="btn btn-ghost normal-case text-xl gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+          <span class="hidden sm:inline">csv-upc-omg</span>
+        </a>
+      </div>
+
+      {# Center: desktop nav #}
+      <div class="navbar-center hidden lg:flex">
+        <ul class="menu menu-horizontal px-1 gap-1">
+          <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+          <li><a href="{% url 'upload-list' %}" class="{% if request.resolver_match.url_name == 'upload-list' or request.resolver_match.url_name == 'upload-detail' or request.resolver_match.url_name == 'upload-create' or request.resolver_match.url_name == 'upload-export' %}active{% endif %}">Uploads</a></li>
+          <li><a href="{% url 'lookup-list' %}" class="{% if request.resolver_match.url_name == 'lookup-list' %}active{% endif %}">Lookups</a></li>
+        </ul>
+      </div>
+
+      {# End: desktop auth #}
+      <div class="flex-none hidden lg:flex">
+        {% if user.is_authenticated %}
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
+            <div class="w-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm">
+              {% firstof user.username|first|upper user.username|first user.username|slice:":1"|upper "U" %}
+            </div>
+          </div>
+          <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow">
+            <li class="menu-title"><span class="text-sm font-semibold truncate px-2">{{ user.username }}</span></li>
+            <li><a href="{% url 'admin:index' %}">Admin Panel</a></li>
+            <li><a href="{% url 'admin:logout' %}">Logout</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <a href="{% url 'admin:login' %}" class="btn btn-primary btn-sm">Login</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Main content #}
+    <main class="container mx-auto px-4 py-6 flex-1">
+      {% if messages %}
+      <div class="space-y-2 mb-6">
+      {% for message in messages %}
+        <div role="alert" class="alert alert-{{ message.tags|default:'info' }}">
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    {# Footer #}
+    <footer class="footer footer-center p-4 bg-base-100 text-base-content mt-auto border-t">
+      <aside>
+        <p class="text-base-content/60 text-sm"><strong>csv-upc-omg</strong> — UPC Lookup &amp; Inventory Tracking</p>
+      </aside>
+    </footer>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const toggle = document.getElementById('mobile-toggle');
+        const menu = document.getElementById('mobile-menu');
+        if (toggle && menu) {
+          toggle.addEventListener('click', () => {
+            menu.classList.toggle('hidden');
+          });
+        }
+      });
+    </script>
+    {% block extra_scripts %}{% endblock %}
+  </body>
+</html>

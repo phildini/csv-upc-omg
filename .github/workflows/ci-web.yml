@@ -1,0 +1,61 @@
+name: CI - Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "src/**"
+      - "pyproject.toml"
+      - ".github/workflows/ci-web.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "src/**"
+      - "pyproject.toml"
+      - ".github/workflows/ci-web.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Build Tailwind CSS
+        run: uv run python web/manage.py tailwind build
+
+      - name: Ensure staticfiles directory exists
+        run: mkdir -p staticfiles
+
+      - name: Run Django system check
+        run: |
+          cd web
+          PYTHONPATH="../web:../src" DJANGO_SETTINGS_MODULE=config.settings.dev uv run python manage.py check
+
+      - name: Run web tests
+        env:
+          PYTHONPATH: "../web:../src"
+          DJANGO_SETTINGS_MODULE: config.settings.dev
+        run: |
+          cd web
+          uv run python manage.py test inventory
+
+      - name: Run ruff check on web
+        run: uv run ruff check web/
+
+      - name: Run ruff format check on web
+        run: uv run ruff format --check web/
