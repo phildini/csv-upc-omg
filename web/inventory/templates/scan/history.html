@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Scan History — csv-upc-omg{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+  <h1 class="text-3xl font-bold">Scan History</h1>
+  <a href="{% url 'scan' %}" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m-1 4v1m0 10v1m-1-4v1m10-1v1m-4-1H1m20 0h-1m-10 0h-1m-10 0H1" />
+    </svg>
+    New Scan
+  </a>
+</div>
+
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    {% if scans %}
+    <ul class="divide-y divide-base-200">
+      {% for scan in scans %}
+      <li class="py-3 flex items-center justify-between hover:bg-base-200/50 px-2 rounded-lg">
+        <div class="flex-1 min-w-0">
+          <div class="font-mono text-sm">{{ scan.upc }}</div>
+          <div class="text-xs text-base-content/60 truncate">{{ scan.product_title|default:"No result" }}</div>
+        </div>
+        <div class="flex items-center gap-2 ml-4">
+          <div class="badge badge-{{ scan.status }} badge-sm gap-1">
+            {{ scan.get_status_display }}
+          </div>
+          <span class="text-xs text-base-content/40 whitespace-nowrap">{{ scan.created_at|date:"M d H:i" }}</span>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-base-content/60 text-center py-8">No scans yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

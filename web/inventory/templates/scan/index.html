@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Scan — csv-upc-omg{% endblock %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row gap-6">
+  <div class="flex-1">
+    <h1 class="text-3xl font-bold mb-2">Scan Barcode</h1>
+    <p class="text-base-content/60 mb-6">Point your camera at a barcode or enter a UPC manually.</p>
+
+    <div class="card bg-base-100 shadow-sm mb-6">
+      <div class="card-body">
+        <div id="reader" class="w-full max-w-md mx-auto rounded-lg overflow-hidden bg-base-300"></div>
+        <div class="flex gap-2 mt-4">
+          <button id="start-btn" class="btn btn-primary btn-sm" onclick="startCamera()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 018.07 4H19a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Start Camera
+          </button>
+          <button id="stop-btn" class="btn btn-error btn-sm btn-disabled" onclick="stopCamera()" disabled>
+            Stop
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">OR</div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title mb-4">Manual Entry</h2>
+        <label class="form-control w-full">
+          <input type="text" id="manual-upc" placeholder="Enter UPC (e.g. 012345678905)"
+                 pattern="[0-9]{12,14}" maxlength="14"
+                 class="input input-bordered w-full" />
+        </label>
+        <button onclick="submitManual()" class="btn btn-primary mt-2 w-full">Lookup</button>
+
+        <div id="result-area" class="mt-4"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-full lg:w-80">
+    <div class="card bg-base-100 shadow-sm lg:sticky lg:top-20">
+      <div class="card-body">
+        <h2 class="card-title text-lg">Recent Scans</h2>
+        <div id="recent-scans"
+             hx-get="{% url 'scan-history' %}"
+             hx-trigger="load, htmx:afterRequest from:body"
+             hx-swap="innerHTML">
+          <span class="loading loading-dots loading-sm"></span>
+        </div>
+        <a href="{% url 'scan-history' %}" class="btn btn-ghost btn-sm mt-2">View All</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+let html5QrCode = null;
+let scanning = false;
+let lastScanned = '';
+
+async function startCamera() {
+  try {
+    html5QrCode = new Html5Qrcode('reader');
+    const devices = await Html5Qrcode.getCameras();
+    if (!devices.length) {
+      document.getElementById('result-area').innerHTML =
+        '<div class="alert alert-warning">No cameras found.</div>';
+      return;
+    }
+
+    const backCamera = devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
+
+    await html5QrCode.start(
+      backCamera.id,
+      { fps: 10, qrbox: { width: 300, height: 150 }, aspectRatio: 2.0 },
+      onScanSuccess,
+      () => {}
+    );
+    scanning = true;
+    document.getElementById('start-btn').classList.add('hidden');
+    document.getElementById('stop-btn').classList.remove('btn-disabled');
+    document.getElementById('stop-btn').disabled = false;
+  } catch (err) {
+    document.getElementById('result-area').innerHTML =
+      `<div class="alert alert-error">Camera error: ${err}</div>`;
+  }
+}
+
+function stopCamera() {
+  if (html5QrCode && scanning) {
+    html5QrCode.stop().then(() => {
+      scanning = false;
+      document.getElementById('start-btn').classList.remove('hidden');
+      document.getElementById('stop-btn').classList.add('btn-disabled');
+      document.getElementById('stop-btn').disabled = true;
+      html5QrCode.clear();
+    });
+  }
+}
+
+function onScanSuccess(decodedText) {
+  if (decodedText === lastScanned) return;
+  lastScanned = decodedText;
+
+  const upc = decodedText.replace(/[^0-9]/g, '');
+  if (upc.length < 8) return;
+
+  document.getElementById('result-area').innerHTML =
+    `<div class="alert alert-info alert-sm py-2"><span>Scanned: <code class="font-mono text-sm">${upc}</code></span></div>`;
+
+  submitUPC(upc);
+  setTimeout(() => { lastScanned = ''; }, 2000);
+}
+
+function submitManual() {
+  const upc = document.getElementById('manual-upc').value.trim();
+  if (upc) submitUPC(upc);
+}
+
+function submitUPC(upc) {
+  document.getElementById('result-area').innerHTML =
+    '<div class="flex items-center gap-3 p-3"><span class="loading loading-spinner loading-sm"></span><span>Looking up...</span></div>';
+
+  const formData = new FormData();
+  formData.append('upc', upc);
+  formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+  fetch("{% url 'scan' %}", {
+    method: "POST",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    body: formData,
+  })
+  .then((r) => r.text())
+  .then((html) => {
+    document.getElementById("result-area").innerHTML = html;
+    document.getElementById("manual-upc").value = "";
+  })
+  .catch(() => {
+    document.getElementById("result-area").innerHTML =
+      '<div class="alert alert-error alert-sm">Lookup failed.</div>';
+  });
+}
+</script>
+{% endblock %}

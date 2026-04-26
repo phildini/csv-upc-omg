@@ -3,14 +3,15 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView
 from django_tables2 import SingleTableView
 
 from .forms import UploadForm
-from .models import CSVUpload, LookupRecord
+from .models import CSVUpload, LookupRecord, Scan
 from .services import UploadService
 from .tables import LookupTable, UploadTable
 from .tasks import lookup_batch_task, process_csv_task
@@ -100,3 +101,42 @@ class LookupListView(LoginRequiredMixin, SingleTableView):
         return LookupRecord.objects.filter(
             csv_upload__user=self.request.user
         ).select_related("csv_upload")
+
+
+@login_required
+def scan(request):
+    return render(request, "scan/index.html")
+
+
+@require_POST
+@login_required
+def scan_post(request):
+    upc = request.POST.get("upc", "").strip()
+    if not upc:
+        return JsonResponse({"error": "No UPC provided"}, status=400)
+
+    result = UploadService.lookup_upc(upc)
+    Scan.objects.create(
+        user=request.user,
+        upc=upc,
+        product_title=result["title"],
+        status=result["status"],
+        raw_response=result.get("error", ""),
+    )
+    return render(request, "scan/_result.html", result)
+
+
+@login_required
+def scan_history(request):
+    scans = Scan.objects.filter(user=request.user)[:50]
+    return render(request, "scan/history.html", {"scans": scans})
+
+
+@require_POST
+@login_required
+def scan_delete(request, scan_id):
+    Scan.objects.filter(user=request.user, id=scan_id).delete()
+    if request.headers.get("HX-Request"):
+        return HttpResponse("")
+    messages.success(request, "Scan deleted.")
+    return redirect("scan-history")
