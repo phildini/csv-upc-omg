@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('success', 'Success'), ('not_found', 'Not Found'), ('failed', 'Failed')], max_length=20)),
                 ('raw_response', models.TextField(blank=True, default='')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='quick_scans', to=settings.AUTH_USER_MODEL)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='scans', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'ordering': ['-created_at'],
