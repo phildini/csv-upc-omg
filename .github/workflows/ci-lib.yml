@@ -31,21 +31,16 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev
-        working-directory: src
+        run: uv sync --all-packages --dev
 
       - name: Run tests with coverage
-        run: uv run pytest -v --cov=csv_upc_omg --cov=tests --cov-report=term-missing tests/
-        working-directory: src
+        run: uv run pytest -v --cov=csv_upc_omg --cov=src/tests --cov-report=term-missing src/tests/
 
       - name: Run ruff check
-        run: uv run ruff check csv_upc_omg/ tests/
-        working-directory: src
+        run: uv run ruff check src/csv_upc_omg/ src/tests/
 
       - name: Run ruff format check
-        run: uv run ruff format --check csv_upc_omg/ tests/
-        working-directory: src
+        run: uv run ruff format --check src/csv_upc_omg/ src/tests/
 
       - name: Run mypy
-        run: uv run mypy csv_upc_omg/
-        working-directory: src
+        run: uv run mypy src/csv_upc_omg/
