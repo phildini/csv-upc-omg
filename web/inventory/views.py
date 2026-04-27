@@ -110,15 +110,22 @@ def scan(request):
         if not upc:
             return JsonResponse({"error": "No UPC provided"}, status=400)
 
-        result = UploadService.lookup_upc(upc)
-        Scan.objects.create(
-            user=request.user,
-            upc=upc,
-            product_title=result["title"],
-            status=result["status"],
-            raw_response=result.get("error", ""),
-        )
-        return render(request, "scan/_result.html", result)
+        try:
+            result = UploadService.lookup_upc(upc)
+            Scan.objects.create(
+                user=request.user,
+                upc=upc,
+                product_title=result["title"],
+                status=result["status"],
+                raw_response=result.get("error", ""),
+            )
+            return render(request, "scan/_result.html", result)
+        except Exception as e:
+            return render(
+                request,
+                "scan/_result.html",
+                {"title": None, "status": "error", "error": str(e)},
+            )
 
     return render(request, "scan/index.html")
 

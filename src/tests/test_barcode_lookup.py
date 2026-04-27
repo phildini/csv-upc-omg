@@ -7,202 +7,201 @@ import pytest
 
 from csv_upc_omg.barcode_lookup import (
     BarcodeAPIError,
+    _fetch_openfoodfacts,
+    _fetch_upcitemdb,
     fetch_product_title_sync,
 )
 
 
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_success(mock_client_class):
+@patch("csv_upc_omg.barcode_lookup._fetch_openfoodfacts", return_value=None)
+@patch("csv_upc_omg.barcode_lookup._fetch_upcitemdb")
+def test_fetch_product_title_sync_success(mock_upcitemdb, mock_off):
     """Test successful product title fetch."""
-    mock_response = Mock()
-    mock_response.text = """
-    <html>
-        <body>
-            <div class="product-details">
-                <h4>Test Product Name</h4>
-            </div>
-        </body>
-    </html>
-    """
-    mock_response.raise_for_status.return_value = None
-
-    mock_client = Mock()
-    mock_client.get.return_value = mock_response
-    mock_client_class.return_value.__enter__.return_value = mock_client
+    mock_upcitemdb.return_value = "Test Product Name"
 
     result = fetch_product_title_sync("123456789012")
     assert result == "Test Product Name"
-    mock_client.get.assert_called_once()
-    # Verify URL and headers were passed
-    call_args = mock_client.get.call_args
-    assert call_args[0][0] == "https://www.barcodelookup.com/123456789012"
-    assert "headers" in call_args[1]
-    assert "User-Agent" in call_args[1]["headers"]
+    mock_upcitemdb.assert_called_once_with("123456789012", 10.0)
 
 
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_selector_not_found(mock_client_class):
-    """Test when .product-details h4 selector is not found."""
-    mock_response = Mock()
-    mock_response.text = """
-    <html>
-        <body>
-            <h1>Some Other Title</h1>
-        </body>
-    </html>
-    """
-    mock_response.raise_for_status.return_value = None
+@patch("csv_upc_omg.barcode_lookup._fetch_openfoodfacts", return_value=None)
+@patch("csv_upc_omg.barcode_lookup._fetch_upcitemdb", return_value=None)
+def test_fetch_product_title_sync_not_found(mock_upcitemdb, mock_off):
+    """Test when both APIs return no results."""
+    result = fetch_product_title_sync("123456789012")
+    assert result is None
 
-    mock_client = Mock()
-    mock_client.get.return_value = mock_response
-    mock_client_class.return_value.__enter__.return_value = mock_client
+
+@patch("csv_upc_omg.barcode_lookup._fetch_openfoodfacts", return_value="OFF Product")
+@patch("csv_upc_omg.barcode_lookup._fetch_upcitemdb", return_value=None)
+def test_fetch_product_title_sync_fallback_to_off(mock_upcitemdb, mock_off):
+    """Test fallback to Open Food Facts when UPCitemdb returns nothing."""
+    result = fetch_product_title_sync("123456789012")
+    assert result == "OFF Product"
+
+
+@patch("csv_upc_omg.barcode_lookup._fetch_openfoodfacts")
+@patch("csv_upc_omg.barcode_lookup._fetch_upcitemdb")
+def test_fetch_product_title_sync_both_fail(mock_upcitemdb, mock_off):
+    """Test when both APIs raise BarcodeAPIError."""
+    mock_upcitemdb.side_effect = BarcodeAPIError("rate limit")
+    mock_off.side_effect = BarcodeAPIError("network error")
 
     result = fetch_product_title_sync("123456789012")
     assert result is None
 
 
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_no_selector_match(mock_client_class):
-    """Test when .product-details h4 selector doesn't match anything."""
-    mock_response = Mock()
-    mock_response.text = """
-    <html>
-        <body>
-            <p>No product information available</p>
-        </body>
-    </html>
-    """
-    mock_response.raise_for_status.return_value = None
+# -- UPCitemdb tests -- #
 
+
+def _mock_httpx_client(response=None, side_effect=None):
+    """Create a mocked httpx.Client context manager."""
     mock_client = Mock()
-    mock_client.get.return_value = mock_response
-    mock_client_class.return_value.__enter__.return_value = mock_client
+    if response is not None:
+        mock_client.get.return_value = response
+    if side_effect is not None:
+        mock_client.get.side_effect = side_effect
+    mock_ctx = Mock()
+    mock_ctx.__enter__ = Mock(return_value=mock_client)
+    mock_ctx.__exit__ = Mock(return_value=False)
+    return mock_ctx
 
-    result = fetch_product_title_sync("123456789012")
-    assert result is None
 
-
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_404_error(mock_client_class):
-    """Test handling of 404 errors."""
-    mock_response = Mock()
-    mock_response.status_code = 404
-
-    mock_client = Mock()
-    mock_client.get.side_effect = httpx.HTTPStatusError(
-        "404 Not Found", request=Mock(), response=mock_response
-    )
-    mock_client_class.return_value.__enter__.return_value = mock_client
-
-    result = fetch_product_title_sync("123456789012")
-    assert result is None
+def _make_response(status_code=200, json_data=None):
+    mock = Mock()
+    mock.status_code = status_code
+    mock.json.return_value = json_data if json_data is not None else {}
+    mock.raise_for_status = Mock()
+    return mock
 
 
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_http_error(mock_client_class):
-    """Test handling of HTTP errors other than 404."""
-    mock_response = Mock()
-    mock_response.status_code = 500
+def test_fetch_upcitemdb_success(mock_client_cls):
+    """Test UPCitemdb returns title."""
+    resp = _make_response(200, {"items": [{"title": "Test Product", "ean": "123456789012"}]})
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
 
-    mock_client = Mock()
-    mock_client.get.side_effect = httpx.HTTPStatusError(
-        "500 Server Error", request=Mock(), response=mock_response
-    )
-    mock_client_class.return_value.__enter__.return_value = mock_client
-
-    with pytest.raises(BarcodeAPIError, match="HTTP error 500"):
-        fetch_product_title_sync("123456789012")
-
-
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_timeout(mock_client_class):
-    """Test handling of timeout errors."""
-    mock_client = Mock()
-    mock_client.get.side_effect = httpx.TimeoutException("Timeout")
-    mock_client_class.return_value.__enter__.return_value = mock_client
-
-    with pytest.raises(BarcodeAPIError, match="Timeout while fetching"):
-        fetch_product_title_sync("123456789012")
-
-
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_generic_error(mock_client_class):
-    """Test handling of generic errors."""
-    mock_client = Mock()
-    mock_client.get.side_effect = Exception("Something went wrong")
-    mock_client_class.return_value.__enter__.return_value = mock_client
-
-    with pytest.raises(BarcodeAPIError, match="Error fetching product"):
-        fetch_product_title_sync("123456789012")
-
-
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_empty_title(mock_client_class):
-    """Test when h4 element exists but is empty."""
-    mock_response = Mock()
-    mock_response.text = """
-    <html>
-        <body>
-            <div class="product-details">
-                <h4></h4>
-            </div>
-        </body>
-    </html>
-    """
-    mock_response.raise_for_status.return_value = None
-
-    mock_client = Mock()
-    mock_client.get.return_value = mock_response
-    mock_client_class.return_value.__enter__.return_value = mock_client
-
-    result = fetch_product_title_sync("123456789012")
-    assert result == ""
-
-
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_whitespace_only(mock_client_class):
-    """Test when h4 element contains only whitespace."""
-    mock_response = Mock()
-    mock_response.text = """
-    <html>
-        <body>
-            <div class="product-details">
-                <h4>   \n\t   </h4>
-            </div>
-        </body>
-    </html>
-    """
-    mock_response.raise_for_status.return_value = None
-
-    mock_client = Mock()
-    mock_client.get.return_value = mock_response
-    mock_client_class.return_value.__enter__.return_value = mock_client
-
-    result = fetch_product_title_sync("123456789012")
-    assert result == ""
-
-
-@patch("csv_upc_omg.barcode_lookup.httpx.Client")
-def test_fetch_product_title_sync_custom_timeout(mock_client_class):
-    """Test custom timeout parameter."""
-    mock_response = Mock()
-    mock_response.text = """
-    <html>
-        <body>
-            <div class="product-details">
-                <h4>Test Product</h4>
-            </div>
-        </body>
-    </html>
-    """
-    mock_response.raise_for_status.return_value = None
-
-    mock_client = Mock()
-    mock_client.get.return_value = mock_response
-    mock_client_class.return_value.__enter__.return_value = mock_client
-
-    result = fetch_product_title_sync("123456789012", timeout=5.0)
+    result = _fetch_upcitemdb("123456789012", 10.0)
     assert result == "Test Product"
+    mock_client_cls.assert_called_once_with(timeout=10.0)
 
-    # Verify timeout was passed to client
-    mock_client_class.assert_called_once_with(timeout=5.0)
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_upcitemdb_not_found(mock_client_cls):
+    """Test UPCitemdb returns empty items list."""
+    resp = _make_response(200, {"items": []})
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    result = _fetch_upcitemdb("123456789012", 10.0)
+    assert result is None
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_upcitemdb_rate_limit(mock_client_cls):
+    """Test UPCitemdb 429 raises BarcodeAPIError."""
+    resp = _make_response(429, {})
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    with pytest.raises(BarcodeAPIError, match="rate limit"):
+        _fetch_upcitemdb("123456789012", 10.0)
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_upcitemdb_http_error(mock_client_cls):
+    """Test UPCitemdb non-200 status raises BarcodeAPIError via raise_for_status."""
+    resp = Mock()
+    resp.status_code = 500
+    resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "500 Internal Server Error", request=Mock(), response=resp
+    )
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    with pytest.raises(BarcodeAPIError):
+        _fetch_upcitemdb("123456789012", 10.0)
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_upcitemdb_timeout(mock_client_cls):
+    """Test UPCitemdb timeout raises BarcodeAPIError."""
+    mock_client_cls.return_value = _mock_httpx_client(
+        side_effect=httpx.TimeoutException("Timeout")
+    )
+
+    with pytest.raises(BarcodeAPIError, match="Timeout"):
+        _fetch_upcitemdb("123456789012", 10.0)
+
+
+# -- Open Food Facts tests -- #
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_openfoodfacts_success(mock_client_cls):
+    """Test Open Food Facts returns product with brands."""
+    resp = _make_response(
+        200,
+        {
+            "status": 1,
+            "product": {"product_name": "Organic Milk", "brands": "Dairy Co"},
+        },
+    )
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    result = _fetch_openfoodfacts("0123456789012", 10.0)
+    assert result == "Dairy Co Organic Milk"
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_openfoodfacts_no_brands(mock_client_cls):
+    """Test Open Food Facts returns product without brands."""
+    resp = _make_response(
+        200, {"status": 1, "product": {"product_name": "Simple Product"}}
+    )
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    result = _fetch_openfoodfacts("0123456789012", 10.0)
+    assert result == "Simple Product"
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_openfoodfacts_not_found(mock_client_cls):
+    """Test Open Food Facts returns nothing for unknown UPC."""
+    resp = _make_response(200, {"status": 0})
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    result = _fetch_openfoodfacts("0123456789012", 10.0)
+    assert result is None
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_openfoodfacts_http_error(mock_client_cls):
+    """Test Open Food Facts HTTP error raises BarcodeAPIError."""
+    resp = Mock()
+    resp.status_code = 500
+    resp.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "500 Error", request=Mock(), response=resp
+    )
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    with pytest.raises(BarcodeAPIError):
+        _fetch_openfoodfacts("0123456789012", 10.0)
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_openfoodfacts_timeout(mock_client_cls):
+    """Test Open Food Facts timeout raises BarcodeAPIError."""
+    mock_client_cls.return_value = _mock_httpx_client(
+        side_effect=httpx.TimeoutException("Timeout")
+    )
+
+    with pytest.raises(BarcodeAPIError, match="Timeout"):
+        _fetch_openfoodfacts("0123456789012", 10.0)
+
+
+@patch("csv_upc_omg.barcode_lookup.httpx.Client")
+def test_fetch_upcitemdb_custom_timeout(mock_client_cls):
+    """Test custom timeout is passed to httpx.Client."""
+    resp = _make_response(200, {"items": [{"title": "Product"}]})
+    mock_client_cls.return_value = _mock_httpx_client(response=resp)
+
+    _fetch_upcitemdb("123456789012", 5.0)
+    mock_client_cls.assert_called_once_with(timeout=5.0)
