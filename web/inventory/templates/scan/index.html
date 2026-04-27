@@ -31,6 +31,7 @@
     <div class="card bg-base-100 shadow-sm">
       <div class="card-body">
         <h2 class="card-title mb-4">Manual Entry</h2>
+        {% csrf_token %}
         <label class="form-control w-full">
           <input type="text" id="manual-upc" placeholder="Enter UPC (e.g. 012345678905)"
                  pattern="[0-9]{12,14}" maxlength="14"
@@ -47,11 +48,8 @@
     <div class="card bg-base-100 shadow-sm lg:sticky lg:top-20">
       <div class="card-body">
         <h2 class="card-title text-lg">Recent Scans</h2>
-        <div id="recent-scans"
-             hx-get="{% url 'scan-history' %}"
-             hx-trigger="load, htmx:afterRequest from:body"
-             hx-swap="innerHTML">
-          <span class="loading loading-dots loading-sm"></span>
+        <div id="recent-scans">
+          {% include "scan/_history_items.html" with scans=user.scans.all|slice:":5" %}
         </div>
         <a href="{% url 'scan-history' %}" class="btn btn-ghost btn-sm mt-2">View All</a>
       </div>
@@ -141,6 +139,7 @@ function submitUPC(upc) {
   .then((html) => {
     document.getElementById("result-area").innerHTML = html;
     document.getElementById("manual-upc").value = "";
+    htmx.ajax("GET", "{% url 'scan-history' %}", { target: "#recent-scans" });
   })
   .catch(() => {
     document.getElementById("result-area").innerHTML =

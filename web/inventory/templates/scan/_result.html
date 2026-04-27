@@ -1,0 +1,15 @@
+{% if title %}
+<div class="alert alert-success">
+  <div>
+    <div class="font-bold">{{ title }}</div>
+    <div class="text-xs text-base-content/60 font-mono">{{ upc }}</div>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+  <div>
+    <div class="font-bold">Product not found</div>
+    <div class="text-xs text-base-content/60 font-mono">{{ upc }}</div>
+  </div>
+</div>
+{% endif %}

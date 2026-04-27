@@ -33,29 +33,24 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync --dev
+        working-directory: web
 
       - name: Build Tailwind CSS
-        run: uv run python web/manage.py tailwind build
+        run: uv run manage tailwind build
+        working-directory: web
 
       - name: Ensure staticfiles directory exists
         run: mkdir -p staticfiles
 
       - name: Run Django system check
-        run: |
-          cd web
-          PYTHONPATH="../web:../src" DJANGO_SETTINGS_MODULE=config.settings.dev uv run python manage.py check
+        run: uv run manage check
 
       - name: Run web tests
-        env:
-          PYTHONPATH: "../web:../src"
-          DJANGO_SETTINGS_MODULE: config.settings.dev
-        run: |
-          cd web
-          uv run python manage.py test inventory
+        run: uv run manage test inventory
 
       - name: Run ruff check on web
-        run: uv run ruff check web/
+        run: uv run ruff check .
 
       - name: Run ruff format check on web
-        run: uv run ruff format --check web/
+        run: uv run ruff format --check .

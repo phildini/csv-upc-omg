@@ -12,6 +12,16 @@ def main():
     if web_dir not in sys.path:
         sys.path.insert(0, web_dir)
 
+    # Add src/ so csv_upc_omg is importable in workspace
+    src_dir = str(Path(__file__).resolve().parent.parent / "src")
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+
+    # Add venv site-packages if running without uv
+    venv_site = str(Path(__file__).resolve().parent.parent / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages")
+    if os.path.isdir(venv_site) and venv_site not in sys.path:
+        sys.path.insert(0, venv_site)
+
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
     try:
         from django.core.management import execute_from_command_line

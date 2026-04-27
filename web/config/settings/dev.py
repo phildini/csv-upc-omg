@@ -6,6 +6,10 @@ DEBUG = True
 SECRET_KEY = "django-insecure-dev-key-not-for-production-use-only"  # noqa: F405
 
 ALLOWED_HOSTS += ["0.0.0.0", "*", "localhost", "127.0.0.1"]  # noqa: F405
+CSRF_TRUSTED_ORIGINS = [
+    "https://hexbot.nebulosa-moth.ts.net",
+    "http://localhost:8000",
+]
 
 INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405
 MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405

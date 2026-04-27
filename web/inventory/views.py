@@ -105,30 +105,29 @@ class LookupListView(LoginRequiredMixin, SingleTableView):
 
 @login_required
 def scan(request):
+    if request.method == "POST":
+        upc = request.POST.get("upc", "").strip()
+        if not upc:
+            return JsonResponse({"error": "No UPC provided"}, status=400)
+
+        result = UploadService.lookup_upc(upc)
+        Scan.objects.create(
+            user=request.user,
+            upc=upc,
+            product_title=result["title"],
+            status=result["status"],
+            raw_response=result.get("error", ""),
+        )
+        return render(request, "scan/_result.html", result)
+
     return render(request, "scan/index.html")
-
-
-@require_POST
-@login_required
-def scan_post(request):
-    upc = request.POST.get("upc", "").strip()
-    if not upc:
-        return JsonResponse({"error": "No UPC provided"}, status=400)
-
-    result = UploadService.lookup_upc(upc)
-    Scan.objects.create(
-        user=request.user,
-        upc=upc,
-        product_title=result["title"],
-        status=result["status"],
-        raw_response=result.get("error", ""),
-    )
-    return render(request, "scan/_result.html", result)
 
 
 @login_required
 def scan_history(request):
-    scans = Scan.objects.filter(user=request.user)[:50]
+    scans = Scan.objects.filter(user=request.user).order_by("-created_at")[:50]
+    if request.headers.get("HX-Request"):
+        return render(request, "scan/_history_items.html", {"scans": scans})
     return render(request, "scan/history.html", {"scans": scans})
 
 

@@ -5,14 +5,12 @@ on:
     branches: [main]
     paths:
       - "src/**"
-      - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/ci-lib.yml"
   pull_request:
     branches: [main]
     paths:
       - "src/**"
-      - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/ci-lib.yml"
 
@@ -34,15 +32,20 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --dev
+        working-directory: src
 
       - name: Run tests with coverage
-        run: uv run pytest -v --cov=src --cov=tests --cov-report=term-missing tests/
+        run: uv run pytest -v --cov=csv_upc_omg --cov=tests --cov-report=term-missing tests/
+        working-directory: src
 
       - name: Run ruff check
-        run: uv run ruff check src/ tests/
+        run: uv run ruff check csv_upc_omg/ tests/
+        working-directory: src
 
       - name: Run ruff format check
-        run: uv run ruff format --check src/ tests/
+        run: uv run ruff format --check csv_upc_omg/ tests/
+        working-directory: src
 
       - name: Run mypy
-        run: uv run mypy src/
+        run: uv run mypy csv_upc_omg/
+        working-directory: src
