@@ -1,10 +1,16 @@
 """Utilities for fetching product information from barcode lookup services."""
 
+from typing import Any
+
 import httpx
 
 
 class BarcodeAPIError(Exception):
     """Exception raised when barcode lookup fails."""
+
+
+def _title_str(value: Any) -> str | None:
+    return str(value) if value is not None else None
 
 
 def fetch_product_title_sync(upc: str, timeout: float = 10.0) -> str | None:
@@ -51,7 +57,7 @@ def _fetch_upcitemdb(upc: str, timeout: float) -> str | None:
         data = response.json()
         items = data.get("items", [])
         if items:
-            return items[0].get("title")
+            return _title_str(items[0].get("title"))
         return None
     except BarcodeAPIError:
         raise
@@ -74,8 +80,8 @@ def _fetch_openfoodfacts(upc: str, timeout: float) -> str | None:
         data = response.json()
         if data.get("status") == 1:
             product = data.get("product", {})
-            product_name = product.get("product_name")
-            brands = product.get("brands")
+            product_name = _title_str(product.get("product_name"))
+            brands = _title_str(product.get("brands"))
             if product_name:
                 if brands:
                     return f"{brands} {product_name}"
