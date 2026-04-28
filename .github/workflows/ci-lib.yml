@@ -5,14 +5,12 @@ on:
     branches: [main]
     paths:
       - "src/**"
-      - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/ci-lib.yml"
   pull_request:
     branches: [main]
     paths:
       - "src/**"
-      - "tests/**"
       - "pyproject.toml"
       - ".github/workflows/ci-lib.yml"
 
@@ -33,16 +31,16 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --all-packages --dev
 
       - name: Run tests with coverage
-        run: uv run pytest -v --cov=src --cov=tests --cov-report=term-missing tests/
+        run: uv run pytest -v --cov=csv_upc_omg --cov=src/tests --cov-report=term-missing src/tests/
 
       - name: Run ruff check
-        run: uv run ruff check src/ tests/
+        run: uv run ruff check src/csv_upc_omg/ src/tests/
 
       - name: Run ruff format check
-        run: uv run ruff format --check src/ tests/
+        run: uv run ruff format --check src/csv_upc_omg/ src/tests/
 
       - name: Run mypy
-        run: uv run mypy src/
+        run: uv run mypy src/csv_upc_omg/

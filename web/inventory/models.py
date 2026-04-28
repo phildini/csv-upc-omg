@@ -74,3 +74,31 @@ class LookupRecord(models.Model):
 
     def __str__(self):
         return f"{self.upc} - {self.get_status_display()}"
+
+
+class Scan(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="scans"
+    )
+    upc = models.CharField(max_length=14)
+    product_title = models.CharField(max_length=255, null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("success", "Success"),
+            ("not_found", "Not Found"),
+            ("failed", "Failed"),
+        ],
+    )
+    raw_response = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.upc} - {self.get_status_display()}"

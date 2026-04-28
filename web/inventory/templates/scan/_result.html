@@ -1,0 +1,25 @@
+{% if status == "success" and title %}
+<div class="alert alert-success">
+  <div>
+    <div class="font-bold">{{ title }}</div>
+    <div class="text-xs text-base-content/60 font-mono">{{ upc }}</div>
+  </div>
+</div>
+{% elif status == "failed" or status == "error" %}
+<div class="alert alert-error">
+  <div>
+    <div class="font-bold">Lookup failed</div>
+    <div class="text-xs text-base-content/70 font-mono">{{ upc }}</div>
+    {% if error %}
+    <div class="text-xs text-base-content/60 mt-1">{{ error }}</div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+  <div>
+    <div class="font-bold">Product not found</div>
+    <div class="text-xs text-base-content/60 font-mono">{{ upc }}</div>
+  </div>
+</div>
+{% endif %}

@@ -3,14 +3,17 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView
 from django_tables2 import SingleTableView
 
+from csv_upc_omg.barcode_lookup import BarcodeAPIError
+
 from .forms import UploadForm
-from .models import CSVUpload, LookupRecord
+from .models import CSVUpload, LookupRecord, Scan
 from .services import UploadService
 from .tables import LookupTable, UploadTable
 from .tasks import lookup_batch_task, process_csv_task
@@ -100,3 +103,58 @@ class LookupListView(LoginRequiredMixin, SingleTableView):
         return LookupRecord.objects.filter(
             csv_upload__user=self.request.user
         ).select_related("csv_upload")
+
+
+@login_required
+def scan(request):
+    if request.method == "POST":
+        upc = request.POST.get("upc", "").strip()
+        if not upc:
+            return JsonResponse({"error": "No UPC provided"}, status=400)
+
+        try:
+            title = UploadService.lookup_upc(upc, timeout=10.0)
+            if title:
+                Scan.objects.create(
+                    user=request.user,
+                    upc=upc,
+                    product_title=title,
+                    status="success",
+                    raw_response="",
+                )
+                return render(
+                    request,
+                    "scan/_result.html",
+                    {"upc": upc, "title": title, "status": "success"},
+                )
+            return render(
+                request,
+                "scan/_result.html",
+                {"upc": upc, "title": None, "status": "not_found"},
+            )
+        except BarcodeAPIError as e:
+            return render(
+                request,
+                "scan/_result.html",
+                {"upc": upc, "title": None, "status": "error", "error": str(e)},
+            )
+
+    return render(request, "scan/index.html")
+
+
+@login_required
+def scan_history(request):
+    scans = Scan.objects.filter(user=request.user).order_by("-created_at")[:50]
+    if request.headers.get("HX-Request"):
+        return render(request, "scan/_history_items.html", {"scans": scans})
+    return render(request, "scan/history.html", {"scans": scans})
+
+
+@require_POST
+@login_required
+def scan_delete(request, scan_id):
+    Scan.objects.filter(user=request.user, id=scan_id).delete()
+    if request.headers.get("HX-Request"):
+        return HttpResponse("")
+    messages.success(request, "Scan deleted.")
+    return redirect("scan-history")

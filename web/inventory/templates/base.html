@@ -25,6 +25,7 @@
             <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
             <li><a href="{% url 'upload-list' %}">Uploads</a></li>
             <li><a href="{% url 'lookup-list' %}">Lookups</a></li>
+            <li><a href="{% url 'scan' %}">Scan</a></li>
           </ul>
         </div>
 
@@ -39,9 +40,14 @@
       {# Center: desktop nav #}
       <div class="navbar-center hidden lg:flex">
         <ul class="menu menu-horizontal px-1 gap-1">
-          <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
-          <li><a href="{% url 'upload-list' %}" class="{% if request.resolver_match.url_name == 'upload-list' or request.resolver_match.url_name == 'upload-detail' or request.resolver_match.url_name == 'upload-create' or request.resolver_match.url_name == 'upload-export' %}active{% endif %}">Uploads</a></li>
-          <li><a href="{% url 'lookup-list' %}" class="{% if request.resolver_match.url_name == 'lookup-list' %}active{% endif %}">Lookups</a></li>
+           <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+           <li><a href="{% url 'upload-list' %}" class="{% if request.resolver_match.url_name == 'upload-list' or request.resolver_match.url_name == 'upload-detail' or request.resolver_match.url_name == 'upload-create' or request.resolver_match.url_name == 'upload-export' %}active{% endif %}">Uploads</a></li>
+           <li><a href="{% url 'lookup-list' %}" class="{% if request.resolver_match.url_name == 'lookup-list' %}active{% endif %}">Lookups</a></li>
+           <li>
+             <a href="{% url 'scan' %}" class="{% if request.resolver_match.url_name == 'scan' or request.resolver_match.url_name == 'scan-history' or request.resolver_match.url_name == 'scan-delete' %}active{% endif %}">
+               <span class="badge badge-sm badge-primary">NEW</span> Scan
+             </a>
+           </li>
         </ul>
       </div>
 
