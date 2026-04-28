@@ -114,22 +114,19 @@ class UploadServiceTests(TestCase):
     def test_lookup_upc_success(self, mock_fetch):
         mock_fetch.return_value = "Test Widget"
         result = UploadService.lookup_upc("012345678905")
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(result["title"], "Test Widget")
+        self.assertEqual(result, "Test Widget")
 
     @patch("inventory.services.fetch_product_title_sync")
     def test_lookup_upc_not_found(self, mock_fetch):
         mock_fetch.return_value = None
         result = UploadService.lookup_upc("000000000000")
-        self.assertEqual(result["status"], "not_found")
-        self.assertIsNone(result["title"])
+        self.assertIsNone(result)
 
     @patch("inventory.services.fetch_product_title_sync")
     def test_lookup_upc_api_error(self, mock_fetch):
         mock_fetch.side_effect = BarcodeAPIError("Rate limited")
-        result = UploadService.lookup_upc("012345678905")
-        self.assertEqual(result["status"], "failed")
-        self.assertIn("Rate limited", result["error"])
+        with self.assertRaises(BarcodeAPIError):
+            UploadService.lookup_upc("012345678905")
 
     @patch("inventory.services.fetch_product_title_sync")
     def test_batch_lookup_updates_records(self, mock_fetch):

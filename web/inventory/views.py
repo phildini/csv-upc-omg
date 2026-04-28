@@ -10,6 +10,8 @@ from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, DetailView
 from django_tables2 import SingleTableView
 
+from csv_upc_omg.barcode_lookup import BarcodeAPIError
+
 from .forms import UploadForm
 from .models import CSVUpload, LookupRecord, Scan
 from .services import UploadService
@@ -111,20 +113,28 @@ def scan(request):
             return JsonResponse({"error": "No UPC provided"}, status=400)
 
         try:
-            result = UploadService.lookup_upc(upc)
-            Scan.objects.create(
-                user=request.user,
-                upc=upc,
-                product_title=result["title"],
-                status=result["status"],
-                raw_response=result.get("error", ""),
-            )
-            return render(request, "scan/_result.html", result)
-        except Exception as e:
+            title = UploadService.lookup_upc(upc, timeout=10.0)
+            if title:
+                Scan.objects.create(
+                    user=request.user,
+                    upc=upc,
+                    product_title=title,
+                    status="success",
+                    raw_response="",
+                )
+                return render(
+                    request, "scan/_result.html", {"upc": upc, "title": title, "status": "success"}
+                )
             return render(
                 request,
                 "scan/_result.html",
-                {"title": None, "status": "error", "error": str(e)},
+                {"upc": upc, "title": None, "status": "not_found"},
+            )
+        except BarcodeAPIError as e:
+            return render(
+                request,
+                "scan/_result.html",
+                {"upc": upc, "title": None, "status": "error", "error": str(e)},
             )
 
     return render(request, "scan/index.html")

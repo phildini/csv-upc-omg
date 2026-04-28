@@ -36,18 +36,16 @@ class UploadService:
         return await sync_to_async(UploadService.process_upload)(upload)
 
     @staticmethod
-    def lookup_upc(upc: str, timeout: float = 10.0) -> dict:
-        """Call barcode_lookup, return dict with title/status/error."""
-        try:
-            title = fetch_product_title_sync(upc, timeout=timeout)
-            if title:
-                return {"title": title, "status": "success", "error": ""}
-            return {"title": None, "status": "not_found", "error": ""}
-        except BarcodeAPIError as e:
-            return {"title": None, "status": "failed", "error": str(e)}
+    def lookup_upc(upc: str, timeout: float = 10.0) -> str | None:
+        """Fetch product title for UPC.
+
+        Returns the product title if found, None if not found.
+        Raises BarcodeAPIError on network/API failures.
+        """
+        return fetch_product_title_sync(upc, timeout=timeout)
 
     @staticmethod
-    async def alookup_upc(upc: str, timeout: float = 10.0) -> dict:
+    async def alookup_upc(upc: str, timeout: float = 10.0) -> str | None:
         """Async version of lookup_upc."""
         return await sync_to_async(UploadService.lookup_upc, thread_sensitive=True)(
             upc, timeout
@@ -60,12 +58,22 @@ class UploadService:
         results = {"success": 0, "not_found": 0, "failed": 0}
 
         for record in pending:
-            lookup_result = UploadService.lookup_upc(record.upc, timeout)
-            record.product_title = lookup_result["title"]
-            record.status = lookup_result["status"]
-            record.error_message = lookup_result["error"]
-            record.save(update_fields=["product_title", "status", "error_message"])
-            results[lookup_result["status"]] += 1
+            try:
+                title = UploadService.lookup_upc(record.upc, timeout)
+                if title:
+                    record.product_title = title
+                    record.status = "success"
+                    record.error_message = ""
+                else:
+                    record.status = "not_found"
+                    record.error_message = ""
+                record.save(update_fields=["product_title", "status", "error_message"])
+            except BarcodeAPIError as e:
+                record.status = "failed"
+                record.error_message = str(e)
+                record.save(update_fields=["status", "error_message"])
+
+            results[record.status] += 1
             upload.processed_rows += 1
             upload.save(update_fields=["processed_rows"])
 
