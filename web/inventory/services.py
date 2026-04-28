@@ -7,10 +7,20 @@ from pathlib import Path
 from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
 
-from csv_upc_omg.barcode_lookup import BarcodeAPIError, fetch_product_title_sync
+from csv_upc_omg.barcode_lookup import (
+    BarcodeAPIError,
+    fetch_product_details_sync,
+    fetch_product_title_sync,
+)
 from csv_upc_omg.csv_utils import extract_upcs_from_csv
 
-from .models import CSVUpload, LookupRecord
+from .models import (
+    CSVUpload,
+    InventoryItem,
+    Location,
+    LookupRecord,
+    UPCProduct,
+)
 
 
 class UploadService:
@@ -18,14 +28,15 @@ class UploadService:
 
     @staticmethod
     def process_upload(upload: CSVUpload) -> int:
-        """Read CSV, create LookupRecords, return count of UPCs found."""
+        """Read CSV and create LookupRecords, return count of UPCs found."""
         file_path = Path(upload.file.path)
         upcs = extract_upcs_from_csv(file_path)
         upload.total_rows = len(upcs)
         upload.save(update_fields=["total_rows"])
 
         records = [
-            LookupRecord(csv_upload=upload, upc=upc, status="pending") for upc in upcs
+            LookupRecord(csv_upload=upload, upc=upc, status="pending")
+            for upc in upcs
         ]
         LookupRecord.objects.bulk_create(records, ignore_conflicts=True)
         return len(records)
@@ -43,6 +54,17 @@ class UploadService:
         Raises BarcodeAPIError on network/API failures.
         """
         return fetch_product_title_sync(upc, timeout=timeout)
+
+    @staticmethod
+    def lookup_product_details(upc: str, timeout: float = 10.0) -> dict[str, str | None]:
+        """Fetch full product details for UPC from APIs.
+
+        Returns dict with keys: title, brand, category, description, image_url, source.
+
+        Raises:
+            BarcodeAPIError: If no product data is found.
+        """
+        return fetch_product_details_sync(upc, timeout=timeout)
 
     @staticmethod
     async def alookup_upc(upc: str, timeout: float = 10.0) -> str | None:
@@ -87,6 +109,65 @@ class UploadService:
         return await sync_to_async(UploadService.batch_lookup, thread_sensitive=True)(
             upload, timeout
         )
+
+    @staticmethod
+    def scan_and_create_item(
+        user: User,
+        upc: str,
+        location: Location | None = None,
+        quantity: int = 1,
+        timeout: float = 10.0,
+    ) -> InventoryItem:
+        """Scan a barcode and create an InventoryItem.
+
+        First checks if UPCProduct already exists. If not, fetches from the API
+        and creates the catalogue entry. Then creates an InventoryItem linked to
+        the user, the UPCProduct, and optional location.
+
+        Args:
+            user: The user creating the item.
+            upc: The UPC code scanned.
+            location: Optional Location for where the item is stored.
+            quantity: Number of items, defaults to 1.
+            timeout: API timeout in seconds, defaults to 10.0.
+
+        Returns:
+            The newly created InventoryItem.
+
+        Raises:
+            BarcodeAPIError: If no product data is found in the API.
+        """
+        product, _ = UPCProduct.objects.get_or_create(
+            upc=upc,
+            defaults={
+                "title": f"Unknown Product ({upc})",
+                "source": "manual",
+            },
+        )
+
+        if product.source == "manual" and not product.title.startswith("Unknown"):
+            pass
+        elif product.source == "manual":
+            try:
+                details = fetch_product_details_sync(upc, timeout=timeout)
+                if details.get("title"):
+                    product.title = details["title"] or product.title
+                    product.brand = details.get("brand") or product.brand
+                    product.category = details.get("category") or product.category
+                    product.description = details.get("description") or product.description
+                    product.image_url = details.get("image_url") or product.image_url
+                    product.source = details.get("source") or product.source
+                    product.save()
+            except BarcodeAPIError:
+                pass
+
+        item = InventoryItem.objects.create(
+            user=user,
+            product=product,
+            location=location,
+            quantity=quantity,
+        )
+        return item
 
     @staticmethod
     def export_to_csv(upload: CSVUpload) -> io.BytesIO:

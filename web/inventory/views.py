@@ -13,7 +13,7 @@ from django_tables2 import SingleTableView
 from csv_upc_omg.barcode_lookup import BarcodeAPIError
 
 from .forms import UploadForm
-from .models import CSVUpload, LookupRecord, Scan
+from .models import CSVUpload, Location, LookupRecord, Scan, UPCProduct
 from .services import UploadService
 from .tables import LookupTable, UploadTable
 from .tasks import lookup_batch_task, process_csv_task
@@ -113,25 +113,7 @@ def scan(request):
             return JsonResponse({"error": "No UPC provided"}, status=400)
 
         try:
-            title = UploadService.lookup_upc(upc, timeout=10.0)
-            if title:
-                Scan.objects.create(
-                    user=request.user,
-                    upc=upc,
-                    product_title=title,
-                    status="success",
-                    raw_response="",
-                )
-                return render(
-                    request,
-                    "scan/_result.html",
-                    {"upc": upc, "title": title, "status": "success"},
-                )
-            return render(
-                request,
-                "scan/_result.html",
-                {"upc": upc, "title": None, "status": "not_found"},
-            )
+            details = UploadService.lookup_product_details(upc, timeout=10.0)
         except BarcodeAPIError as e:
             return render(
                 request,
@@ -139,7 +121,87 @@ def scan(request):
                 {"upc": upc, "title": None, "status": "error", "error": str(e)},
             )
 
+        product, _ = UPCProduct.objects.get_or_create(
+            upc=upc,
+            defaults={
+                "title": details.get("title") or f"Unknown Product ({upc})",
+                "brand": details.get("brand") or "",
+                "category": details.get("category") or "",
+                "description": details.get("description") or "",
+                "image_url": details.get("image_url") or "",
+                "source": details.get("source") or "manual",
+            },
+        )
+
+        if product.source == "manual":
+            if details.get("title"):
+                product.title = details["title"]
+            if details.get("brand"):
+                product.brand = details["brand"]
+            if details.get("category"):
+                product.category = details["category"]
+            if details.get("description"):
+                product.description = details["description"]
+            if details.get("image_url"):
+                product.image_url = details["image_url"]
+            if details.get("source"):
+                product.source = details["source"]
+            product.save()
+
+        locations = Location.objects.filter(user=request.user)
+        return render(
+            request,
+            "scan/_product_form.html",
+            {
+                "upc": upc,
+                "title": product.title,
+                "brand": product.brand,
+                "product_id": product.id,
+                "locations": locations,
+            },
+        )
+
     return render(request, "scan/index.html")
+
+
+@login_required
+def scan_create_item(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    upc = request.POST.get("upc", "").strip()
+    product_id = request.POST.get("product_id", "").strip()
+    quantity = int(request.POST.get("quantity", 1))
+    location_id = request.POST.get("location", "").strip() or None
+
+    if not upc:
+        return JsonResponse({"error": "Invalid UPC"}, status=400)
+
+    try:
+        product = UPCProduct.objects.get(id=product_id, upc=upc)
+    except UPCProduct.DoesNotExist:
+        return JsonResponse({"error": "Product not found"}, status=404)
+
+    location = None
+    if location_id:
+        try:
+            location = Location.objects.get(id=location_id, user=request.user)
+        except (Location.DoesNotExist, ValueError):
+            return JsonResponse({"error": "Invalid location"}, status=400)
+
+    from inventory.models import InventoryItem
+
+    item = InventoryItem.objects.create(
+        user=request.user,
+        product=product,
+        location=location,
+        quantity=quantity,
+    )
+    return render(
+        request,
+        "scan/_item_created.html",
+        {"item": item, "upc": upc},
+    )
 
 
 @login_required

@@ -102,3 +102,97 @@ class Scan(models.Model):
 
     def __str__(self):
         return f"{self.upc} - {self.get_status_display()}"
+
+
+class Location(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="locations"
+    )
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "name"],
+                name="unique_location_name_per_user",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user", "name"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class UPCProduct(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    upc = models.CharField(max_length=14, unique=True)
+    title = models.CharField(max_length=255)
+    brand = models.CharField(max_length=255, blank=True, default="")
+    category = models.CharField(max_length=255, blank=True, default="")
+    description = models.TextField(blank=True, default="")
+    image_url = models.URLField(blank=True, default="")
+    source = models.CharField(
+        max_length=50,
+        choices=[
+            ("upcitemdb", "UPCItemDB"),
+            ("openfoodfacts", "Open Food Facts"),
+            ("manual", "Manual Entry"),
+        ],
+        default="manual",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["title"]
+        indexes = [
+            models.Index(fields=["upc"]),
+            models.Index(fields=["brand"]),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.upc})"
+
+
+class InventoryItem(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="inventory_items",
+    )
+    product = models.ForeignKey(
+        UPCProduct, on_delete=models.CASCADE, related_name="inventory_items"
+    )
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="inventory_items",
+    )
+    quantity = models.PositiveIntegerField(default=1)
+    low_stock_threshold = models.PositiveIntegerField(default=1)
+    notes = models.TextField(blank=True, default="")
+    purchase_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+            models.Index(fields=["user", "expiry_date"]),
+            models.Index(fields=["user", "quantity"]),
+        ]
+
+    def __str__(self):
+        return f"{self.product.title} (x{self.quantity})"

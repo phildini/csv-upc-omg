@@ -16,6 +16,7 @@ urlpatterns = [
     ),
     path("lookups/", views.LookupListView.as_view(), name="lookup-list"),
     path("scan/", views.scan, name="scan"),
+    path("scan/create-item/", views.scan_create_item, name="scan-create-item"),
     path("scan/history/", views.scan_history, name="scan-history"),
     path("scan/<uuid:scan_id>/", views.scan_delete, name="scan-delete"),
 ]

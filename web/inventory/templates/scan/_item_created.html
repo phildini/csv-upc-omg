@@ -1,0 +1,9 @@
+<div class="alert alert-success">
+  <div>
+    <div class="font-bold">Added to Inventory</div>
+    <div class="text-sm">{{ item.product.title }}</div>
+    <div class="text-xs text-base-content/60">
+      Quantity: {{ item.quantity }}{% if item.location %} | Location: {{ item.location.name }}{% endif %}
+    </div>
+  </div>
+</div>
