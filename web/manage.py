@@ -18,7 +18,13 @@ def main():
         sys.path.insert(0, src_dir)
 
     # Add venv site-packages if running without uv
-    venv_site = str(Path(__file__).resolve().parent.parent / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages")
+    venv_site = str(
+        Path(__file__).resolve().parent.parent
+        / ".venv"
+        / "lib"
+        / f"python{sys.version_info.major}.{sys.version_info.minor}"
+        / "site-packages"
+    )
     if os.path.isdir(venv_site) and venv_site not in sys.path:
         sys.path.insert(0, venv_site)
 

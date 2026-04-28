@@ -78,7 +78,9 @@ def _make_response(status_code=200, json_data=None):
 @patch("csv_upc_omg.barcode_lookup.httpx.Client")
 def test_fetch_upcitemdb_success(mock_client_cls):
     """Test UPCitemdb returns title."""
-    resp = _make_response(200, {"items": [{"title": "Test Product", "ean": "123456789012"}]})
+    resp = _make_response(
+        200, {"items": [{"title": "Test Product", "ean": "123456789012"}]}
+    )
     mock_client_cls.return_value = _mock_httpx_client(response=resp)
 
     result = _fetch_upcitemdb("123456789012", 10.0)
