@@ -123,7 +123,9 @@ def scan(request):
                     raw_response="",
                 )
                 return render(
-                    request, "scan/_result.html", {"upc": upc, "title": title, "status": "success"}
+                    request,
+                    "scan/_result.html",
+                    {"upc": upc, "title": title, "status": "success"},
                 )
             return render(
                 request,
