@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% load render_table from django_tables2 %}
+
+{% block title %}My Inventory — csv-upc-omg{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+  <h1 class="text-3xl font-bold">My Inventory</h1>
+  <div class="flex gap-2">
+    <a href="{% url 'item-create' %}" class="btn btn-primary btn-sm">+ Add Item</a>
+    <a href="{% url 'scan' %}" class="btn btn-secondary btn-sm">Scan Barcode</a>
+  </div>
+</div>
+
+{# Filters #}
+<div class="card bg-base-100 shadow-sm mb-6">
+  <div class="card-body py-3 px-4">
+    <form method="get" class="flex flex-wrap gap-2 items-end">
+      <div class="form-control w-full sm:w-64">
+        <label class="label py-1">
+          <span class="label-text text-xs">Search</span>
+        </label>
+        <input type="text" name="q" value="{{ search_query }}" placeholder="Product, brand, UPC..."
+               class="input input-bordered input-sm w-full" />
+      </div>
+
+      <div class="form-control w-full sm:w-48">
+        <label class="label py-1">
+          <span class="label-text text-xs">Status</span>
+        </label>
+        <select name="status" class="select select-bordered select-sm w-full">
+          <option value="">All Items</option>
+          <option value="low_stock" {% if status_filter == "low_stock" %}selected{% endif %}>Low Stock</option>
+          <option value="expiring_soon" {% if status_filter == "expiring_soon" %}selected{% endif %}>Expiring Soon</option>
+          <option value="expired" {% if status_filter == "expired" %}selected{% endif %}>Expired</option>
+        </select>
+      </div>
+
+      <div class="form-control w-full sm:w-48">
+        <label class="label py-1">
+          <span class="label-text text-xs">Location</span>
+        </label>
+        <select name="location" class="select select-bordered select-sm w-full">
+          <option value="">All Locations</option>
+          {% for loc in locations %}
+          <option value="{{ loc.id }}" {% if location_filter == loc.id|urlencode %}selected{% endif %}>
+            {{ loc.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-sm btn-ghost">Filter</button>
+      {% if search_query or status_filter or location_filter %}
+      <a href="{% url 'item-list' %}" class="btn btn-sm btn-ghost">Clear</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+{# Table #}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    {% if table.data %}
+      {% render_table table %}
+    {% else %}
+      <div class="py-8 text-center">
+        <p class="text-base-content/60 mb-4">
+          {% if search_query or status_filter or location_filter %}
+            No items match your filters.
+          {% else %}
+            No inventory items yet.
+          {% endif %}
+        </p>
+        {% if not search_query and not status_filter and not location_filter %}
+        <a href="{% url 'scan' %}" class="btn btn-primary">Scan your first barcode</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

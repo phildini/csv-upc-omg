@@ -1,0 +1,15 @@
+{# Status badge component for inventory items
+
+Usage:
+  {% include "components/_status_badge.html" with is_expired=item.is_expired is_expiring_soon=item.is_expiring_soon is_low_stock=item.is_low_stock %}
+
+#}
+{% if is_expired %}
+<span class="badge badge-error badge-sm">expired</span>
+{% elif is_expiring_soon %}
+<span class="badge badge-warning badge-sm">expiring soon</span>
+{% elif is_low_stock %}
+<span class="badge badge-warning badge-sm">low stock</span>
+{% else %}
+<span class="badge badge-ghost badge-sm">OK</span>
+{% endif %}

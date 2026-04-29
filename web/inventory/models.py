@@ -196,3 +196,25 @@ class InventoryItem(models.Model):
 
     def __str__(self):
         return f"{self.product.title} (x{self.quantity})"
+
+    @property
+    def is_low_stock(self):
+        return self.quantity <= self.low_stock_threshold
+
+    @property
+    def is_expired(self):
+        if not self.expiry_date:
+            return False
+        from django.utils import timezone
+
+        return self.expiry_date < timezone.now().date()
+
+    @property
+    def is_expiring_soon(self, days=30):
+        if not self.expiry_date:
+            return False
+        from django.utils import timezone
+        import datetime
+
+        threshold = timezone.now().date() + datetime.timedelta(days=days)
+        return self.expiry_date <= threshold and not self.is_expired

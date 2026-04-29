@@ -13,7 +13,6 @@
 
     {# Navbar #}
     <div class="navbar bg-base-100 shadow-sm px-4">
-      {# Start: hamburger + brand #}
       <div class="flex-1">
         <div class="dropdown">
           <div tabindex="0" role="button" class="btn btn-ghost btn-square lg:hidden" id="mobile-toggle">
@@ -21,11 +20,13 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </div>
-          <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow" id="mobile-menu">
+          <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow hidden" id="mobile-menu">
             <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
-            <li><a href="{% url 'upload-list' %}">Uploads</a></li>
-            <li><a href="{% url 'lookup-list' %}">Lookups</a></li>
+            <li><a href="{% url 'item-list' %}">Inventory</a></li>
             <li><a href="{% url 'scan' %}">Scan</a></li>
+            <li><a href="{% url 'product-list' %}">Catalogue</a></li>
+            <li><a href="{% url 'location-list' %}">Locations</a></li>
+            <li><a href="{% url 'upload-list' %}">Uploads</a></li>
           </ul>
         </div>
 
@@ -37,27 +38,27 @@
         </a>
       </div>
 
-      {# Center: desktop nav #}
       <div class="navbar-center hidden lg:flex">
         <ul class="menu menu-horizontal px-1 gap-1">
-           <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
-           <li><a href="{% url 'upload-list' %}" class="{% if request.resolver_match.url_name == 'upload-list' or request.resolver_match.url_name == 'upload-detail' or request.resolver_match.url_name == 'upload-create' or request.resolver_match.url_name == 'upload-export' %}active{% endif %}">Uploads</a></li>
-           <li><a href="{% url 'lookup-list' %}" class="{% if request.resolver_match.url_name == 'lookup-list' %}active{% endif %}">Lookups</a></li>
-           <li>
-             <a href="{% url 'scan' %}" class="{% if request.resolver_match.url_name == 'scan' or request.resolver_match.url_name == 'scan-history' or request.resolver_match.url_name == 'scan-delete' %}active{% endif %}">
-               <span class="badge badge-sm badge-primary">NEW</span> Scan
-             </a>
-           </li>
+          {% with url_name=request.resolver_match.url_name|default:'' %}
+          <li><a href="{% url 'dashboard' %}" class="{% if url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+          <li><a href="{% url 'item-list' %}" class="{% if 'item' in url_name %}active{% endif %}">Inventory</a></li>
+          <li>
+            <a href="{% url 'scan' %}" class="{% if 'scan' in url_name %}active{% endif %}">Scan</a>
+          </li>
+          <li><a href="{% url 'product-list' %}" class="{% if 'product' in url_name %}active{% endif %}">Catalogue</a></li>
+          <li><a href="{% url 'location-list' %}" class="{% if 'location' in url_name %}active{% endif %}">Locations</a></li>
+          <li><a href="{% url 'upload-list' %}" class="{% if 'upload' in url_name %}active{% endif %}">Uploads</a></li>
+          {% endwith %}
         </ul>
       </div>
 
-      {# End: desktop auth #}
       <div class="flex-none hidden lg:flex">
         {% if user.is_authenticated %}
         <div class="dropdown dropdown-end">
           <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
             <div class="w-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm">
-              {% firstof user.username|first|upper user.username|first user.username|slice:":1"|upper "U" %}
+              {{ user.username|slice:":1"|upper }}
             </div>
           </div>
           <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow">

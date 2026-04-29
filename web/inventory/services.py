@@ -192,10 +192,24 @@ class UploadService:
     @staticmethod
     def get_dashboard_stats(user: User) -> dict:
         """Aggregate stats for dashboard view."""
+        from django.db import models
+        from django.utils import timezone
+        import datetime
+
         uploads = CSVUpload.objects.filter(user=user)
         total_lookups = LookupRecord.objects.filter(csv_upload__in=uploads)
         success_count = total_lookups.filter(status="success").count()
         total_count = total_lookups.count()
+
+        items = InventoryItem.objects.filter(user=user)
+        total_items = sum(i.quantity for i in items)
+        low_stock = items.filter(
+            quantity__lte=models.F("low_stock_threshold")
+        ).count()
+        today = timezone.now().date()
+        soon = today + datetime.timedelta(days=7)
+        expiring_soon = items.filter(expiry_date__range=[today, soon]).count()
+        expired = items.filter(expiry_date__lt=today).count()
 
         return {
             "total_uploads": uploads.count(),
@@ -204,4 +218,11 @@ class UploadService:
                 (success_count / total_count * 100) if total_count > 0 else 0
             ),
             "recent_uploads": uploads[:5],
+            "total_items": total_items,
+            "total_products": items.values("product").distinct().count(),
+            "total_locations": Location.objects.filter(user=user).count(),
+            "low_stock_count": low_stock,
+            "expiring_soon_count": expiring_soon,
+            "expired_count": expired,
+            "recent_items": items.select_related("product", "location")[:5],
         }

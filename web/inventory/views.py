@@ -3,19 +3,26 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import models
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
-from django.views.generic import CreateView, DetailView
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
 from django_tables2 import SingleTableView
 
 from csv_upc_omg.barcode_lookup import BarcodeAPIError
 
-from .forms import UploadForm
-from .models import CSVUpload, Location, LookupRecord, Scan, UPCProduct
+from .forms import InventoryItemForm, LocationForm, UploadForm
+from .models import CSVUpload, InventoryItem, Location, LookupRecord, Scan, UPCProduct
 from .services import UploadService
-from .tables import LookupTable, UploadTable
+from .tables import InventoryTable, LookupTable, UploadTable
 from .tasks import lookup_batch_task, process_csv_task
 
 
@@ -115,6 +122,13 @@ def scan(request):
         try:
             details = UploadService.lookup_product_details(upc, timeout=10.0)
         except BarcodeAPIError as e:
+            Scan.objects.create(
+                user=request.user,
+                upc=upc,
+                product_title="",
+                status="failed",
+                raw_response=str(e),
+            )
             return render(
                 request,
                 "scan/_result.html",
@@ -149,6 +163,14 @@ def scan(request):
             product.save()
 
         locations = Location.objects.filter(user=request.user)
+
+        Scan.objects.create(
+            user=request.user,
+            upc=upc,
+            product_title=product.title,
+            status="success",
+        )
+
         return render(
             request,
             "scan/_product_form.html",
@@ -162,6 +184,46 @@ def scan(request):
         )
 
     return render(request, "scan/index.html")
+
+
+@login_required
+def scan_create_item(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    upc = request.POST.get("upc", "").strip()
+    product_id = request.POST.get("product_id", "").strip()
+    quantity = int(request.POST.get("quantity", 1))
+    location_id = request.POST.get("location", "").strip() or None
+
+    if not upc:
+        return JsonResponse({"error": "Invalid UPC"}, status=400)
+
+    try:
+        product = UPCProduct.objects.get(id=product_id, upc=upc)
+    except UPCProduct.DoesNotExist:
+        return JsonResponse({"error": "Product not found"}, status=404)
+
+    location = None
+    if location_id:
+        try:
+            location = Location.objects.get(id=location_id, user=request.user)
+        except (Location.DoesNotExist, ValueError):
+            return JsonResponse({"error": "Invalid location"}, status=400)
+
+    from inventory.models import InventoryItem
+
+    item = InventoryItem.objects.create(
+        user=request.user,
+        product=product,
+        location=location,
+        quantity=quantity,
+    )
+    return render(
+        request,
+        "scan/_item_created.html",
+        {"item": item, "upc": upc},
+    )
 
 
 @login_required
@@ -220,3 +282,233 @@ def scan_delete(request, scan_id):
         return HttpResponse("")
     messages.success(request, "Scan deleted.")
     return redirect("scan-history")
+
+
+# ── Inventory Item Views ──────────────────────────────────────────────
+
+
+class ItemListView(LoginRequiredMixin, SingleTableView):
+    model = InventoryItem
+    template_name = "inventory/list.html"
+    table_class = InventoryTable
+    table_pagination = {"per_page": 20}
+
+    def get_queryset(self):
+        qs = InventoryItem.objects.filter(user=self.request.user).select_related(
+            "product", "location"
+        )
+
+        status = self.request.GET.get("status")
+        if status == "low_stock":
+            qs = qs.filter(quantity__lte=models.F("low_stock_threshold"))
+        elif status == "expiring_soon":
+            from django.utils import timezone
+            import datetime
+
+            today = timezone.now().date()
+            soon = today + datetime.timedelta(days=30)
+            qs = qs.filter(expiry_date__range=[today, soon])
+        elif status == "expired":
+            from django.utils import timezone
+
+            qs = qs.filter(expiry_date__lt=timezone.now().date())
+
+        location_id = self.request.GET.get("location")
+        if location_id:
+            qs = qs.filter(location_id=location_id)
+
+        search = self.request.GET.get("q")
+        if search:
+            qs = qs.filter(
+                models.Q(product__title__icontains=search)
+                | models.Q(product__brand__icontains=search)
+                | models.Q(product__upc__icontains=search)
+            )
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["locations"] = Location.objects.filter(user=self.request.user)
+        context["status_filter"] = self.request.GET.get("status", "")
+        context["location_filter"] = self.request.GET.get("location", "")
+        context["search_query"] = self.request.GET.get("q", "")
+        return context
+
+
+class InventoryItemFormMixin:
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        instance = self.get_object() if hasattr(self, "get_object") else None
+        context["card_title"] = (
+            "Edit Item" if instance and instance.pk else "Add New Item"
+        )
+        context["cancel_url"] = reverse_lazy("item-list")
+        context["submit_text"] = (
+            "Save Changes" if instance and instance.pk else "Add Item"
+        )
+        return context
+
+
+class ItemCreateView(LoginRequiredMixin, InventoryItemFormMixin, CreateView):
+    model = InventoryItem
+    form_class = InventoryItemForm
+    template_name = "inventory/form.html"
+    success_url = reverse_lazy("item-list")
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        return super().form_valid(form)
+
+
+class ItemUpdateView(LoginRequiredMixin, InventoryItemFormMixin, UpdateView):
+    model = InventoryItem
+    form_class = InventoryItemForm
+    template_name = "inventory/form.html"
+    success_url = reverse_lazy("item-list")
+
+    def get_queryset(self):
+        return InventoryItem.objects.filter(user=self.request.user)
+
+
+class ItemDeleteView(LoginRequiredMixin, DeleteView):
+    model = InventoryItem
+    success_url = reverse_lazy("item-list")
+
+    def get_queryset(self):
+        return InventoryItem.objects.filter(user=self.request.user)
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, "Item deleted.")
+        return super().delete(request, *args, **kwargs)
+
+
+@require_POST
+@login_required
+def item_use(request, pk):
+    item = get_object_or_404(InventoryItem, pk=pk, user=request.user)
+    if item.quantity > 0:
+        item.quantity -= 1
+        item.save(update_fields=["quantity"])
+        if item.quantity == 0:
+            messages.warning(request, f"{item.product.title} is now out of stock!")
+        else:
+            messages.success(
+                request, f"Used 1 {item.product.title}. {item.quantity} remaining."
+            )
+    if request.headers.get("HX-Request"):
+        return HttpResponse(f'<span class="badge badge-ghost">x{item.quantity}</span>')
+    return redirect("item-list")
+
+
+@require_POST
+@login_required
+def item_restock(request, pk):
+    item = get_object_or_404(InventoryItem, pk=pk, user=request.user)
+    quantity = int(request.POST.get("quantity", 1))
+    item.quantity += quantity
+    item.save(update_fields=["quantity"])
+    messages.success(
+        request,
+        f"Restocked {item.product.title}. {item.quantity} total.",
+    )
+    if request.headers.get("HX-Request"):
+        return HttpResponse(
+            f'<span class="badge badge-success">x{item.quantity}</span>'
+        )
+    return redirect("item-list")
+
+
+# ── Location Views ────────────────────────────────────────────────────
+
+
+class LocationListView(LoginRequiredMixin, ListView):
+    model = Location
+    template_name = "locations/list.html"
+    context_object_name = "locations"
+
+    def get_queryset(self):
+        return (
+            Location.objects.filter(user=self.request.user)
+            .annotate(item_count=models.Count("inventory_items"))
+            .order_by("name")
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["total_items"] = (
+            InventoryItem.objects.filter(
+                user=self.request.user, location__isnull=False
+            ).aggregate(total=models.Sum("quantity"))["total"]
+            or 0
+        )
+        return context
+
+
+class LocationCreateView(LoginRequiredMixin, CreateView):
+    model = Location
+    form_class = LocationForm
+    template_name = "locations/form.html"
+    success_url = reverse_lazy("location-list")
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        return super().form_valid(form)
+
+
+class LocationDeleteView(LoginRequiredMixin, DeleteView):
+    model = Location
+    success_url = reverse_lazy("location-list")
+
+    def get_queryset(self):
+        return Location.objects.filter(user=self.request.user)
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, "Location deleted.")
+        return super().delete(request, *args, **kwargs)
+
+
+# ── UPCProduct Catalogue Views ────────────────────────────────────────
+
+
+class ProductListView(LoginRequiredMixin, ListView):
+    model = UPCProduct
+    template_name = "catalogue/list.html"
+    context_object_name = "products"
+    paginate_by = 20
+
+    def get_queryset(self):
+        qs = UPCProduct.objects.all()
+        search = self.request.GET.get("q", "")
+        if search:
+            qs = qs.filter(
+                models.Q(title__icontains=search)
+                | models.Q(brand__icontains=search)
+                | models.Q(upc__icontains=search)
+            )
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["search_query"] = self.request.GET.get("q", "")
+        return context
+
+
+class ProductDetailView(LoginRequiredMixin, DetailView):
+    model = UPCProduct
+    slug_field = "upc"
+    slug_url_kwarg = "upc"
+    template_name = "catalogue/detail.html"
+    context_object_name = "product"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["user_items"] = InventoryItem.objects.filter(
+            product=self.object, user=self.request.user
+        ).select_related("location")
+        return context

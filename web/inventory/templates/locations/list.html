@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Locations — csv-upc-omg{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+  <h1 class="text-3xl font-bold">Locations</h1>
+  <a href="{% url 'location-create' %}" class="btn btn-primary btn-sm">+ Add Location</a>
+</div>
+
+{% if locations %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for location in locations %}
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <h2 class="card-title">{{ location.name }}</h2>
+      {% if location.description %}
+      <p class="text-sm text-base-content/70">{{ location.description }}</p>
+      {% endif %}
+      <div class="flex justify-between items-center mt-4">
+        <span class="text-sm text-base-content/50">
+          {{ location.item_count }} item{{ location.item_count|pluralize }}
+        </span>
+        <form method="post" action="{% url 'location-delete' location.id %}"
+              onsubmit="return confirm('Delete this location? Items will be unassigned.')">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body py-12 text-center">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-base-content/20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    <p class="text-base-content/60 mb-4">No locations created yet.</p>
+    <a href="{% url 'location-create' %}" class="btn btn-primary">Create your first location</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
