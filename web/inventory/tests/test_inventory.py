@@ -9,7 +9,14 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from csv_upc_omg.barcode_lookup import BarcodeAPIError
-from inventory.models import CSVUpload, InventoryItem, Location, LookupRecord, Scan, UPCProduct
+from inventory.models import (
+    CSVUpload,
+    InventoryItem,
+    Location,
+    LookupRecord,
+    Scan,
+    UPCProduct,
+)
 from inventory.services import UploadService
 
 CSV_WITH_UPCS_IN_COL_0 = b"""012345678905
@@ -251,8 +258,6 @@ class ScanInventoryFlowTests(TestCase):
 
     def test_scan_successful_lookup_creates_scan_record(self):
         """POST to scan with a valid UPC creates a Scan record."""
-        from inventory.models import Scan, UPCProduct
-
         with patch("inventory.services.fetch_product_details_sync") as mock_api:
             mock_api.return_value = {
                 "title": "Test Widget",
@@ -277,10 +282,9 @@ class ScanInventoryFlowTests(TestCase):
 
     def test_scan_failed_lookup_creates_failed_scan_record(self):
         """POST to scan with an API error creates a failed Scan record."""
-        from inventory.models import Scan
-
         with patch("inventory.services.fetch_product_details_sync") as mock_api:
             from csv_upc_omg.barcode_lookup import BarcodeAPIError
+
             mock_api.side_effect = BarcodeAPIError("Rate limited")
             resp = self.client.post(
                 "/scan/",
@@ -303,9 +307,7 @@ class ScanInventoryFlowTests(TestCase):
             brand="TestBrand",
             source="upcitemdb",
         )
-        location = Location.objects.create(
-            user=self.user, name="Kitchen Pantry"
-        )
+        location = Location.objects.create(user=self.user, name="Kitchen Pantry")
 
         before = InventoryItem.objects.count()
         resp = self.client.post(
@@ -352,6 +354,7 @@ class ScanInventoryFlowTests(TestCase):
     def test_scan_create_item_invalid_product_returns_404(self):
         """POST with nonexistent product_id returns 404."""
         import uuid
+
         resp = self.client.post(
             "/scan/create-item/",
             {
@@ -367,9 +370,7 @@ class ScanInventoryFlowTests(TestCase):
         from inventory.models import Location, UPCProduct
 
         hacker = User.objects.create_user(username="hacker", password="x")
-        location = Location.objects.create(
-            user=hacker, name="Hacker's Shelf"
-        )
+        location = Location.objects.create(user=hacker, name="Hacker's Shelf")
         product = UPCProduct.objects.create(
             upc="012345678905", title="Widget", source="upcitemdb"
         )
@@ -410,9 +411,7 @@ class InventoryCRUDTests(TestCase):
         self.product = UPCProduct.objects.create(
             upc="012345678905", title="Test Widget", source="upcitemdb"
         )
-        self.location = Location.objects.create(
-            user=self.user, name="Kitchen"
-        )
+        self.location = Location.objects.create(user=self.user, name="Kitchen")
         self.item = InventoryItem.objects.create(
             user=self.user,
             product=self.product,
@@ -428,7 +427,7 @@ class InventoryCRUDTests(TestCase):
 
     def test_item_list_user_isolation(self):
         another = User.objects.create_user(username="other", password="pass")
-        another_item = InventoryItem.objects.create(
+        InventoryItem.objects.create(
             user=another,
             product=UPCProduct.objects.create(upc="999999999999", title="Other Item"),
             quantity=1,
@@ -599,9 +598,7 @@ class CatalogueTests(TestCase):
         self.assertContains(resp, "BrandCo")
 
     def test_product_detail_shows_user_items(self):
-        InventoryItem.objects.create(
-            user=self.user, product=self.product, quantity=2
-        )
+        InventoryItem.objects.create(user=self.user, product=self.product, quantity=2)
         resp = self.client.get(f"/catalogue/{self.product.upc}/")
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"My Inventory", resp.content)
@@ -642,6 +639,7 @@ class DashboardTests(TestCase):
 
     def test_dashboard_shows_expired_alert(self):
         import datetime
+
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
         InventoryItem.objects.create(
             user=self.user,

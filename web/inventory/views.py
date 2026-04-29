@@ -211,48 +211,6 @@ def scan_create_item(request):
         except (Location.DoesNotExist, ValueError):
             return JsonResponse({"error": "Invalid location"}, status=400)
 
-    from inventory.models import InventoryItem
-
-    item = InventoryItem.objects.create(
-        user=request.user,
-        product=product,
-        location=location,
-        quantity=quantity,
-    )
-    return render(
-        request,
-        "scan/_item_created.html",
-        {"item": item, "upc": upc},
-    )
-
-
-@login_required
-def scan_create_item(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    upc = request.POST.get("upc", "").strip()
-    product_id = request.POST.get("product_id", "").strip()
-    quantity = int(request.POST.get("quantity", 1))
-    location_id = request.POST.get("location", "").strip() or None
-
-    if not upc:
-        return JsonResponse({"error": "Invalid UPC"}, status=400)
-
-    try:
-        product = UPCProduct.objects.get(id=product_id, upc=upc)
-    except UPCProduct.DoesNotExist:
-        return JsonResponse({"error": "Product not found"}, status=404)
-
-    location = None
-    if location_id:
-        try:
-            location = Location.objects.get(id=location_id, user=request.user)
-        except (Location.DoesNotExist, ValueError):
-            return JsonResponse({"error": "Invalid location"}, status=400)
-
-    from inventory.models import InventoryItem
-
     item = InventoryItem.objects.create(
         user=request.user,
         product=product,
