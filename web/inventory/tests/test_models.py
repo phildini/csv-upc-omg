@@ -153,9 +153,7 @@ class InventoryItemTests(TestCase):
         self.assertIsNone(item.location)
 
     def test_product_cascade_delete(self):
-        item = InventoryItem.objects.create(
-            user=self.user, product=self.product
-        )
+        item = InventoryItem.objects.create(user=self.user, product=self.product)
         self.product.delete()
         self.assertEqual(InventoryItem.objects.filter(id=item.id).count(), 0)
 
