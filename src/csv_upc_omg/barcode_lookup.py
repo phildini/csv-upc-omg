@@ -17,10 +17,6 @@ def _safe_str(value: Any) -> str | None:
     return str(value) if value is not None else None
 
 
-def _safe_str(value: Any) -> str | None:
-    return str(value) if value is not None else None
-
-
 def fetch_product_title_sync(upc: str, timeout: float = 10.0) -> str | None:
     """Fetch product title from UPC/itemdb or Open Food Facts.
 
@@ -49,39 +45,6 @@ def fetch_product_title_sync(upc: str, timeout: float = 10.0) -> str | None:
         pass
 
     return None
-
-
-def fetch_product_details_sync(
-    upc: str, timeout: float = 10.0
-) -> dict[str, str | None]:
-    """Fetch full product details from UPC/itemdb or Open Food Facts.
-
-    Args:
-        upc: The UPC code to lookup
-        timeout: Request timeout in seconds
-
-    Returns:
-        Dict with keys: title, brand, category, description, image_url, source
-        Values are strings or None for missing fields.
-
-    Raises:
-        BarcodeAPIError: If there's an error fetching from all APIs
-    """
-    try:
-        details = _fetch_upcitemdb_details(upc, timeout)
-        if details and details.get("title"):
-            return details
-    except BarcodeAPIError:
-        pass
-
-    try:
-        details = _fetch_openfoodfacts_details(upc, timeout)
-        if details and details.get("title"):
-            return details
-    except BarcodeAPIError:
-        pass
-
-    raise BarcodeAPIError(f"No product found for UPC {upc}")
 
 
 def fetch_product_details_sync(

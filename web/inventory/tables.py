@@ -47,7 +47,9 @@ class LookupTable(tables.Table):
 
 class InventoryTable(tables.Table):
     product = tables.Column(verbose_name="Product")
-    location = tables.Column(verbose_name="Location", accessor="location.name", default="—")
+    location = tables.Column(
+        verbose_name="Location", accessor="location.name", default="—"
+    )
     quantity = tables.Column()
     expiry_date = tables.TemplateColumn(
         Template("{{ value|default:'—' }}"),
@@ -61,7 +63,7 @@ class InventoryTable(tables.Table):
             '<button type="submit" class="btn btn-ghost btn-xs" title="Use one">−</button></form>'
             '<a href="{% url "inventory-item-edit" record.pk %}" class="btn btn-ghost btn-xs">Edit</a>'
             '<form method="post" action="{% url "inventory-item-delete" record.pk %}" class="inline">'
-            '{% csrf_token %}'
+            "{% csrf_token %}"
             '<button type="submit" class="btn btn-ghost btn-xs text-error" onclick="return confirm(\'Delete this item?\')">Delete</button>'
             "</form>"
             '<form method="post" action="{% url "item-restock" record.pk %}">{% csrf_token %}'
@@ -80,6 +82,7 @@ class InventoryTable(tables.Table):
 
     def render_product(self, value, record):
         from django.urls import reverse
+
         return format_html(
             '<a href="{}" class="link link-hover">{}</a>',
             reverse("product-detail", kwargs={"upc": record.product.upc}),
@@ -88,7 +91,9 @@ class InventoryTable(tables.Table):
 
     def render_quantity(self, value, record):
         if record.quantity == 0:
-            return mark_safe('<span class="badge badge-error badge-sm">out of stock</span>')
+            return mark_safe(
+                '<span class="badge badge-error badge-sm">out of stock</span>'
+            )
         if record.is_low_stock:
             return format_html(
                 '<span class="badge badge-warning badge-sm gap-1">{} <span class="text-xs">(low)</span></span>',
@@ -100,7 +105,11 @@ class InventoryTable(tables.Table):
         if record.is_expired:
             return mark_safe('<span class="badge badge-error badge-sm">expired</span>')
         if record.is_expiring_soon:
-            return mark_safe('<span class="badge badge-warning badge-sm">expiring soon</span>')
+            return mark_safe(
+                '<span class="badge badge-warning badge-sm">expiring soon</span>'
+            )
         if record.is_low_stock:
-            return mark_safe('<span class="badge badge-warning badge-sm">low stock</span>')
+            return mark_safe(
+                '<span class="badge badge-warning badge-sm">low stock</span>'
+            )
         return mark_safe('<span class="badge badge-ghost badge-sm">OK</span>')

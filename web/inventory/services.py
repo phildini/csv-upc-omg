@@ -35,8 +35,7 @@ class UploadService:
         upload.save(update_fields=["total_rows"])
 
         records = [
-            LookupRecord(csv_upload=upload, upc=upc, status="pending")
-            for upc in upcs
+            LookupRecord(csv_upload=upload, upc=upc, status="pending") for upc in upcs
         ]
         LookupRecord.objects.bulk_create(records, ignore_conflicts=True)
         return len(records)
@@ -56,7 +55,9 @@ class UploadService:
         return fetch_product_title_sync(upc, timeout=timeout)
 
     @staticmethod
-    def lookup_product_details(upc: str, timeout: float = 10.0) -> dict[str, str | None]:
+    def lookup_product_details(
+        upc: str, timeout: float = 10.0
+    ) -> dict[str, str | None]:
         """Fetch full product details for UPC from APIs.
 
         Returns dict with keys: title, brand, category, description, image_url, source.
@@ -154,7 +155,9 @@ class UploadService:
                     product.title = details["title"] or product.title
                     product.brand = details.get("brand") or product.brand
                     product.category = details.get("category") or product.category
-                    product.description = details.get("description") or product.description
+                    product.description = (
+                        details.get("description") or product.description
+                    )
                     product.image_url = details.get("image_url") or product.image_url
                     product.source = details.get("source") or product.source
                     product.save()
@@ -203,9 +206,7 @@ class UploadService:
 
         items = InventoryItem.objects.filter(user=user)
         total_items = sum(i.quantity for i in items)
-        low_stock = items.filter(
-            quantity__lte=models.F("low_stock_threshold")
-        ).count()
+        low_stock = items.filter(quantity__lte=models.F("low_stock_threshold")).count()
         today = timezone.now().date()
         soon = today + datetime.timedelta(days=7)
         expiring_soon = items.filter(expiry_date__range=[today, soon]).count()
