@@ -9,7 +9,7 @@
 {% if stats.low_stock_count or stats.expiring_soon_count or stats.expired_count %}
 <div class="flex flex-wrap gap-2 mb-6">
   {% if stats.expired_count %}
-  <a href="{% url 'item-list' %}?status=expired" class="badge badge-error gap-1 cursor-pointer">
+  <a href="{% url 'item-list' %}?status=expired" class="badge badge-error gap-1 cursor-pointer fade-in">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
     </svg>
@@ -17,7 +17,7 @@
   </a>
   {% endif %}
   {% if stats.expiring_soon_count %}
-  <a href="{% url 'item-list' %}?status=expiring_soon" class="badge badge-warning gap-1 cursor-pointer">
+  <a href="{% url 'item-list' %}?status=expiring_soon" class="badge badge-warning gap-1 cursor-pointer fade-in">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>
@@ -25,7 +25,7 @@
   </a>
   {% endif %}
   {% if stats.low_stock_count %}
-  <a href="{% url 'item-list' %}?status=low_stock" class="badge badge-warning gap-1 cursor-pointer">
+  <a href="{% url 'item-list' %}?status=low_stock" class="badge badge-warning gap-1 cursor-pointer fade-in">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
     </svg>
@@ -37,7 +37,7 @@
 
 {# Stats Row #}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-  <div class="stats shadow bg-base-100">
+  <div class="stats shadow bg-base-100 hover:shadow-md transition-shadow duration-200">
     <div class="stat">
       <div class="stat-figure text-primary">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <div class="stats shadow bg-base-100">
+  <div class="stats shadow bg-base-100 hover:shadow-md transition-shadow duration-200">
     <div class="stat">
       <div class="stat-figure text-secondary">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -62,7 +62,7 @@
     </div>
   </div>
 
-  <div class="stats shadow bg-base-100">
+  <div class="stats shadow bg-base-100 hover:shadow-md transition-shadow duration-200">
     <div class="stat">
       <div class="stat-figure text-info">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -75,7 +75,7 @@
     </div>
   </div>
 
-  <div class="stats shadow bg-base-100">
+  <div class="stats shadow bg-base-100 hover:shadow-md transition-shadow duration-200">
     <div class="stat">
       <div class="stat-figure text-accent">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,26 +89,26 @@
 </div>
 
 {# Quick Actions #}
-<div class="flex flex-wrap gap-2 mb-8">
-  <a href="{% url 'scan' %}" class="btn btn-primary">
+<div class="flex flex-wrap gap-3 mb-8">
+  <a href="{% url 'scan' %}" class="btn btn-primary flex items-center gap-2 hover:shadow-md transition-shadow duration-200">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 018.07 4H19a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
     </svg>
     Scan UPC
   </a>
-  <a href="{% url 'item-create' %}" class="btn btn-secondary">
+  <a href="{% url 'item-create' %}" class="btn btn-secondary flex items-center gap-2 hover:shadow-md transition-shadow duration-200">
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
     </svg>
     Add Item
   </a>
-  <a href="{% url 'location-list' %}" class="btn btn-ghost">Manage Locations</a>
-  <a href="{% url 'product-list' %}" class="btn btn-ghost">Browse Catalogue</a>
+  <a href="{% url 'location-list' %}" class="btn btn-ghost flex items-center gap-2 hover:shadow-md transition-shadow duration-200">Manage Locations</a>
+  <a href="{% url 'product-list' %}" class="btn btn-ghost flex items-center gap-2 hover:shadow-md transition-shadow duration-200">Browse Catalogue</a>
 </div>
 
 {# Recent Inventory Items #}
-<div class="card bg-base-100 shadow-sm mb-6">
+<div class="card bg-base-100 shadow-sm mb-6 hover:shadow-md transition-shadow duration-200">
   <div class="card-body">
     <div class="flex justify-between items-center">
       <h2 class="card-title">Recent Items</h2>

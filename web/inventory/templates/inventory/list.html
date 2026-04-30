@@ -7,13 +7,24 @@
 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
   <h1 class="text-3xl font-bold">My Inventory</h1>
   <div class="flex gap-2">
-    <a href="{% url 'item-create' %}" class="btn btn-primary btn-sm">+ Add Item</a>
-    <a href="{% url 'scan' %}" class="btn btn-secondary btn-sm">Scan Barcode</a>
+    <a href="{% url 'item-create' %}" class="btn btn-primary btn-sm flex items-center gap-1 hover:shadow-md transition-shadow duration-200">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add Item
+    </a>
+    <a href="{% url 'scan' %}" class="btn btn-secondary btn-sm flex items-center gap-1 hover:shadow-md transition-shadow duration-200">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 018.07 4H19a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      Scan Barcode
+    </a>
   </div>
 </div>
 
 {# Filters #}
-<div class="card bg-base-100 shadow-sm mb-6">
+<div class="card bg-base-100 shadow-sm mb-6 hover:shadow-md transition-shadow duration-200">
   <div class="card-body py-3 px-4">
     <form method="get" class="flex flex-wrap gap-2 items-end">
       <div class="form-control w-full sm:w-64">
@@ -50,16 +61,16 @@
         </select>
       </div>
 
-      <button type="submit" class="btn btn-sm btn-ghost">Filter</button>
+      <button type="submit" class="btn btn-sm btn-ghost hover:shadow-md transition-shadow duration-200">Filter</button>
       {% if search_query or status_filter or location_filter %}
-      <a href="{% url 'item-list' %}" class="btn btn-sm btn-ghost">Clear</a>
+      <a href="{% url 'item-list' %}" class="btn btn-sm btn-ghost hover:shadow-md transition-shadow duration-200">Clear</a>
       {% endif %}
     </form>
   </div>
 </div>
 
 {# Table #}
-<div class="card bg-base-100 shadow-sm">
+<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-200">
   <div class="card-body">
     {% if table.data %}
       {% render_table table %}

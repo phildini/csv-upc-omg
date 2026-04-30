@@ -3,82 +3,74 @@
 {% block title %}Product Catalogue — csv-upc-omg{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
   <h1 class="text-3xl font-bold">Product Catalogue</h1>
-</div>
-
-{# Search #}
-<div class="card bg-base-100 shadow-sm mb-6">
-  <div class="card-body py-3 px-4">
-    <form method="get" class="flex gap-2">
-      <div class="form-control flex-1">
-        <input type="text" name="q" value="{{ search_query }}" placeholder="Search by product name, brand, or UPC..."
-               class="input input-bordered w-full" />
-      </div>
-      <button type="submit" class="btn btn-primary">Search</button>
-      {% if search_query %}
-      <a href="{% url 'product-list' %}" class="btn btn-ghost">Clear</a>
-      {% endif %}
+  <div class="flex gap-2">
+    <form method="get" class="flex">
+      <input type="text" name="q" value="{{ search_query }}" placeholder="Search products..."
+             class="input input-bordered input-sm" />
+      <button type="submit" class="btn btn-sm btn-ghost ml-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </button>
     </form>
   </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-  {% for product in products %}
-  <div class="card bg-base-100 shadow-sm">
-    <div class="card-body">
-      <div class="flex gap-4">
-        {% if product.image_url %}
-        <div class="w-20 h-20 flex-shrink-0 bg-base-200 rounded-lg overflow-hidden">
-          <img src="{{ product.image_url }}" alt="{{ product.title }}" class="w-full h-full object-cover" />
-        </div>
-        {% endif %}
-        <div class="flex-1">
-          <h2 class="card-title">
-            <a href="{% url 'product-detail' product.upc %}" class="link link-hover">{{ product.title }}</a>
-          </h2>
-          {% if product.brand %}
-          <p class="text-sm text-base-content/70">{{ product.brand }}</p>
-          {% endif %}
-          {% if product.category %}
-          <p class="text-xs text-base-content/50 mt-1">
-            <span class="badge badge-ghost badge-sm">{{ product.category }}</span>
-          </p>
-          {% endif %}
-          <p class="text-xs text-base-content/40 font-mono mt-2">{{ product.upc }}</p>
-          <p class="text-xs text-base-content/40">
-            Source: <span class="badge badge-outline badge-sm">{{ product.get_source_display }}</span>
-          </p>
-        </div>
-      </div>
+<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+  <div class="card-body">
+    {% if products %}
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Brand</th>
+            <th>UPC</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for product in products %}
+          <tr class="hover">
+            <td>
+              <a href="{% url 'product-detail' product.upc %}" class="link link-primary">
+                {{ product.title }}
+              </a>
+            </td>
+            <td>{{ product.brand|default:"—" }}</td>
+            <td><code>{{ product.upc }}</code></td>
+            <td class="text-sm">
+              <span class="badge badge-ghost badge-sm">{{ product.source }}</span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+    {% else %}
+    <div class="py-8 text-center">
+      <p class="text-base-content/60 mb-4">No products found.</p>
+    </div>
+    {% endif %}
   </div>
-  {% empty %}
-  <div class="col-span-full py-12 text-center">
-    <p class="text-base-content/60 mb-4">
-      {% if search_query %}
-        No products match your search.
-      {% else %}
-        No products in the catalogue yet. Scan some barcodes to get started!
-      {% endif %}
-    </p>
-  </div>
-  {% endfor %}
 </div>
 
-{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<!-- Pagination -->
+{% if is_paginated %}
 <div class="flex justify-center mt-6">
   <div class="join">
     {% if page_obj.has_previous %}
-    <a href="?page=1{% if search_query %}&q={{ search_query }}{% endif %}" class="join-item btn btn-sm">«</a>
-    <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="join-item btn btn-sm">‹</a>
+    <a href="?q={{ search_query }}&page=1" class="btn join-item">&laquo; First</a>
+    <a href="?q={{ search_query }}&page={{ page_obj.previous_page_number }}" class="btn join-item">Previous</a>
     {% endif %}
-    <span class="join-item btn btn-sm btn-disabled">
-      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-    </span>
+
+    <a class="btn join-item btn-disabled">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</a>
+
     {% if page_obj.has_next %}
-    <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}" class="join-item btn btn-sm">›</a>
-    <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&q={{ search_query }}{% endif %}" class="join-item btn btn-sm">»</a>
+    <a href="?q={{ search_query }}&page={{ page_obj.next_page_number }}" class="btn join-item">Next</a>
+    <a href="?q={{ search_query }}&page={{ page_obj.paginator.num_pages }}" class="btn join-item">Last &raquo;</a>
     {% endif %}
   </div>
 </div>
