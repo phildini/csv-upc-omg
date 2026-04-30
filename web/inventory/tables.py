@@ -46,6 +46,7 @@ class LookupTable(tables.Table):
 
 
 class InventoryTable(tables.Table):
+    image = tables.Column(empty_values=(), verbose_name="Image")
     product = tables.Column(verbose_name="Product")
     location = tables.Column(
         verbose_name="Location", accessor="location.name", default="—"
@@ -76,9 +77,24 @@ class InventoryTable(tables.Table):
 
     class Meta:
         model = InventoryItem
-        fields = ("product", "location", "quantity", "expiry_date", "status_badge")
+        fields = (
+            "image",
+            "product",
+            "location",
+            "quantity",
+            "expiry_date",
+            "status_badge",
+        )
         attrs = {"class": "table table-zebra w-full"}
         order_by = "-created_at"
+
+    def render_image(self, record):
+        if record.product.image_url:
+            return format_html(
+                '<img src="{}" alt="Product Image" class="h-10 w-10 object-contain rounded" />',
+                record.product.image_url,
+            )
+        return mark_safe('<span class="text-gray-400">No image</span>')
 
     def render_product(self, value, record):
         from django.urls import reverse
