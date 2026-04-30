@@ -139,6 +139,8 @@ function submitUPC(upc) {
   .then((html) => {
     document.getElementById("result-area").innerHTML = html;
     document.getElementById("manual-upc").value = "";
+    // Process HTMX attributes on the newly injected form
+    htmx.process(document.getElementById("result-area"));
     htmx.ajax("GET", "{% url 'scan-history' %}", { target: "#recent-scans" });
   })
   .catch(() => {

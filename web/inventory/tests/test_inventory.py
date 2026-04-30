@@ -9,7 +9,14 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from csv_upc_omg.barcode_lookup import BarcodeAPIError
-from inventory.models import CSVUpload, LookupRecord
+from inventory.models import (
+    CSVUpload,
+    InventoryItem,
+    Location,
+    LookupRecord,
+    Scan,
+    UPCProduct,
+)
 from inventory.services import UploadService
 
 CSV_WITH_UPCS_IN_COL_0 = b"""012345678905
@@ -237,3 +244,413 @@ class ViewIntegrationTests(TestCase):
                 302,
                 f"{path} did not redirect when unauthenticated",
             )
+
+
+# ── Scan → Inventory flow ───────────────────────────────────────────
+
+
+class ScanInventoryFlowTests(TestCase):
+    """End-to-end: scanning a UPC creates inventory items."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="scanner", password="pass")
+        self.client.login(username="scanner", password="pass")
+
+    def test_scan_successful_lookup_creates_scan_record(self):
+        """POST to scan with a valid UPC creates a Scan record."""
+        with patch("inventory.services.fetch_product_details_sync") as mock_api:
+            mock_api.return_value = {
+                "title": "Test Widget",
+                "brand": "TestBrand",
+                "category": "TestCategory",
+                "description": "",
+                "image_url": "",
+                "source": "upcitemdb",
+            }
+            resp = self.client.post(
+                "/scan/",
+                {"upc": "012345678905"},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Test Widget", resp.content)
+        self.assertTrue(UPCProduct.objects.filter(upc="012345678905").exists())
+        scan = Scan.objects.get(user=self.user, upc="012345678905")
+        self.assertEqual(scan.status, "success")
+        self.assertEqual(scan.product_title, "Test Widget")
+
+    def test_scan_failed_lookup_creates_failed_scan_record(self):
+        """POST to scan with an API error creates a failed Scan record."""
+        with patch("inventory.services.fetch_product_details_sync") as mock_api:
+            from csv_upc_omg.barcode_lookup import BarcodeAPIError
+
+            mock_api.side_effect = BarcodeAPIError("Rate limited")
+            resp = self.client.post(
+                "/scan/",
+                {"upc": "012345678905"},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Lookup failed", resp.content)
+        scan = Scan.objects.get(user=self.user, upc="012345678905")
+        self.assertEqual(scan.status, "failed")
+
+    def test_scan_create_item_adds_to_inventory(self):
+        """POST to scan/create-item creates an InventoryItem."""
+        from inventory.models import InventoryItem, Location, UPCProduct
+
+        product = UPCProduct.objects.create(
+            upc="012345678905",
+            title="Test Widget",
+            brand="TestBrand",
+            source="upcitemdb",
+        )
+        location = Location.objects.create(user=self.user, name="Kitchen Pantry")
+
+        before = InventoryItem.objects.count()
+        resp = self.client.post(
+            "/scan/create-item/",
+            {
+                "upc": "012345678905",
+                "product_id": str(product.id),
+                "quantity": 2,
+                "location": str(location.id),
+            },
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"Added to Inventory", resp.content)
+        self.assertEqual(InventoryItem.objects.count(), before + 1)
+
+        item = InventoryItem.objects.get(user=self.user, product=product)
+        self.assertEqual(item.quantity, 2)
+        self.assertEqual(item.location, location)
+
+    def test_scan_create_item_without_location(self):
+        """POST to scan/create-item works with no location selected."""
+        from inventory.models import InventoryItem, UPCProduct
+
+        product = UPCProduct.objects.create(
+            upc="012345678905",
+            title="Test Widget",
+            source="upcitemdb",
+        )
+
+        resp = self.client.post(
+            "/scan/create-item/",
+            {
+                "upc": "012345678905",
+                "product_id": str(product.id),
+                "quantity": 1,
+            },
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        item = InventoryItem.objects.get(user=self.user, product=product)
+        self.assertIsNone(item.location)
+
+    def test_scan_create_item_invalid_product_returns_404(self):
+        """POST with nonexistent product_id returns 404."""
+        import uuid
+
+        resp = self.client.post(
+            "/scan/create-item/",
+            {
+                "upc": "012345678905",
+                "product_id": str(uuid.uuid4()),
+                "quantity": 1,
+            },
+        )
+        self.assertEqual(resp.status_code, 404)
+
+    def test_scan_create_item_wrong_user_location(self):
+        """POST with another user's location returns 400."""
+        from inventory.models import Location, UPCProduct
+
+        hacker = User.objects.create_user(username="hacker", password="x")
+        location = Location.objects.create(user=hacker, name="Hacker's Shelf")
+        product = UPCProduct.objects.create(
+            upc="012345678905", title="Widget", source="upcitemdb"
+        )
+
+        resp = self.client.post(
+            "/scan/create-item/",
+            {
+                "upc": "012345678905",
+                "product_id": str(product.id),
+                "quantity": 1,
+                "location": str(location.id),
+            },
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_scan_get_returns_page(self):
+        """GET /scan/ renders the scan page."""
+        resp = self.client.get("/scan/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Scan Barcode")
+
+    def test_scan_requires_auth(self):
+        self.client.logout()
+        for method in ["GET", "POST"]:
+            resp = self.client.get("/scan/")
+            self.assertEqual(resp.status_code, 302)
+
+
+# ── Inventory CRUD ────────────────────────────────────────────────────
+
+
+class InventoryCRUDTests(TestCase):
+    """Tests for inventory item list, create, edit, delete, use, restock."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="invuser", password="pass")
+        self.client.login(username="invuser", password="pass")
+        self.product = UPCProduct.objects.create(
+            upc="012345678905", title="Test Widget", source="upcitemdb"
+        )
+        self.location = Location.objects.create(user=self.user, name="Kitchen")
+        self.item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.product,
+            location=self.location,
+            quantity=3,
+            low_stock_threshold=1,
+        )
+
+    def test_item_list_shows_items(self):
+        resp = self.client.get("/items/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Test Widget")
+
+    def test_item_list_user_isolation(self):
+        another = User.objects.create_user(username="other", password="pass")
+        InventoryItem.objects.create(
+            user=another,
+            product=UPCProduct.objects.create(upc="999999999999", title="Other Item"),
+            quantity=1,
+        )
+        resp = self.client.get("/items/")
+        self.assertNotContains(resp, "Other Item")
+        self.assertContains(resp, "Test Widget")
+
+    def test_item_list_empty_state(self):
+        InventoryItem.objects.filter(user=self.user).delete()
+        resp = self.client.get("/items/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "No inventory items yet")
+
+    def test_item_create(self):
+        before = InventoryItem.objects.count()
+        resp = self.client.post(
+            "/items/create/",
+            {
+                "product": str(self.product.id),
+                "quantity": 5,
+                "location": str(self.location.id),
+                "low_stock_threshold": 1,
+            },
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(InventoryItem.objects.count(), before + 1)
+
+    def test_item_edit(self):
+        resp = self.client.get(f"/items/{self.item.id}/edit/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Test Widget")
+
+        resp = self.client.post(
+            f"/items/{self.item.id}/edit/",
+            {
+                "product": str(self.product.id),
+                "quantity": 10,
+                "location": str(self.location.id),
+                "low_stock_threshold": 2,
+            },
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 10)
+
+    def test_item_edit_other_user_404(self):
+        hacker = User.objects.create_user(username="hacker", password="x")
+        other_item = InventoryItem.objects.create(
+            user=hacker,
+            product=UPCProduct.objects.create(upc="888888888888", title="Hacker Item"),
+            quantity=1,
+        )
+        resp = self.client.get(f"/items/{other_item.id}/edit/")
+        self.assertEqual(resp.status_code, 404)
+
+    def test_item_delete(self):
+        before = InventoryItem.objects.count()
+        resp = self.client.post(f"/items/{self.item.id}/delete/", follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(InventoryItem.objects.count(), before - 1)
+
+    def test_item_use_decrements(self):
+        resp = self.client.post(f"/items/{self.item.id}/use/", follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 2)
+
+    def test_item_use_doesnt_go_negative(self):
+        zero_item = InventoryItem.objects.create(
+            user=self.user,
+            product=UPCProduct.objects.create(upc="777777777777", title="Zero"),
+            quantity=0,
+        )
+        self.client.post(f"/items/{zero_item.id}/use/", follow=True)
+        zero_item.refresh_from_db()
+        self.assertEqual(zero_item.quantity, 0)
+
+    def test_item_restock_increments(self):
+        resp = self.client.post(
+            f"/items/{self.item.id}/restock/",
+            {"quantity": 5},
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.quantity, 8)
+
+    def test_item_requires_auth(self):
+        self.client.logout()
+        for path in ["/items/", "/items/create/", f"/items/{self.item.id}/edit/"]:
+            resp = self.client.get(path)
+            self.assertEqual(resp.status_code, 302, f"{path} didn't redirect")
+
+
+# ── Location CRUD ─────────────────────────────────────────────────────
+
+
+class LocationCRUDTests(TestCase):
+    """Tests for location list, create, delete."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="locuser", password="pass")
+        self.client.login(username="locuser", password="pass")
+        self.location = Location.objects.create(
+            user=self.user, name="Kitchen", description="Main pantry"
+        )
+
+    def test_location_list_shows_locations(self):
+        resp = self.client.get("/locations/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Kitchen")
+
+    def test_location_create(self):
+        before = Location.objects.filter(user=self.user).count()
+        resp = self.client.post(
+            "/locations/create/",
+            {"name": "Garage", "description": "Tool storage"},
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Location.objects.filter(user=self.user).count(), before + 1)
+
+    def test_location_delete(self):
+        before = Location.objects.filter(user=self.user).count()
+        resp = self.client.post(f"/locations/{self.location.id}/delete/", follow=True)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(Location.objects.filter(user=self.user).count(), before - 1)
+
+
+# ── Catalogue Views ───────────────────────────────────────────────────
+
+
+class CatalogueTests(TestCase):
+    """Tests for product catalogue list and detail."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="catuser", password="pass")
+        self.client.login(username="catuser", password="pass")
+        self.product = UPCProduct.objects.create(
+            upc="012345678905",
+            title="Cola",
+            brand="BrandCo",
+            category="Beverages",
+            source="upcitemdb",
+        )
+
+    def test_product_list_shows_products(self):
+        resp = self.client.get("/catalogue/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Cola")
+
+    def test_product_list_search(self):
+        resp = self.client.get("/catalogue/", {"q": "Cola"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Cola")
+
+        resp = self.client.get("/catalogue/", {"q": "NonExistent"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, "Cola")
+
+    def test_product_detail(self):
+        resp = self.client.get(f"/catalogue/{self.product.upc}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Cola")
+        self.assertContains(resp, "BrandCo")
+
+    def test_product_detail_shows_user_items(self):
+        InventoryItem.objects.create(user=self.user, product=self.product, quantity=2)
+        resp = self.client.get(f"/catalogue/{self.product.upc}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"My Inventory", resp.content)
+        self.assertIn(b"Qty: 2", resp.content)
+
+
+# ── Dashboard ─────────────────────────────────────────────────────────
+
+
+class DashboardTests(TestCase):
+    """Tests for dashboard with inventory stats."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="dashuser", password="pass")
+        self.client.login(username="dashuser", password="pass")
+        self.product = UPCProduct.objects.create(
+            upc="012345678905", title="Widget", source="upcitemdb"
+        )
+        self.location = Location.objects.create(user=self.user, name="Kitchen")
+
+    def test_dashboard_shows_inventory_stats(self):
+        InventoryItem.objects.create(
+            user=self.user, product=self.product, quantity=5, location=self.location
+        )
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "5")  # total_items stat
+
+    def test_dashboard_shows_low_stock_alert(self):
+        InventoryItem.objects.create(
+            user=self.user,
+            product=self.product,
+            quantity=1,
+            low_stock_threshold=5,
+        )
+        resp = self.client.get("/")
+        self.assertContains(resp, "low stock")
+
+    def test_dashboard_shows_expired_alert(self):
+        import datetime
+
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        InventoryItem.objects.create(
+            user=self.user,
+            product=self.product,
+            quantity=1,
+            expiry_date=yesterday,
+        )
+        resp = self.client.get("/")
+        self.assertContains(resp, "expired")
+
+    def test_dashboard_empty_state(self):
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "0")  # total_items

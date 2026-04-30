@@ -1,0 +1,47 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title text-success">Product Found</h2>
+    <p class="text-lg">{{ title }}</p>
+    {% if brand %}
+    <p class="text-sm text-base-content/70">Brand: {{ brand }}</p>
+    {% endif %}
+    <p class="text-xs text-base-content/60 font-mono">{{ upc }}</p>
+
+    <form hx-post="{% url 'scan-create-item' %}"
+          hx-target="#result-area"
+          hx-swap="innerHTML"
+          hx-indicator="#result-area"
+          class="mt-4">
+      {% csrf_token %}
+      <input type="hidden" name="upc" value="{{ upc }}" />
+      <input type="hidden" name="product_id" value="{{ product_id }}" />
+
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">Quantity</span>
+        </label>
+        <input type="number"
+               name="quantity"
+               value="1"
+               min="1"
+               class="input input-bordered w-full" />
+      </div>
+
+      {% if locations %}
+      <div class="form-control w-full mt-4">
+        <label class="label">
+          <span class="label-text">Location (optional)</span>
+        </label>
+        <select name="location" class="select select-bordered w-full">
+          <option value="">Choose location</option>
+          {% for location in locations %}
+          <option value="{{ location.id }}">{{ location.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary mt-4">Add to Inventory</button>
+    </form>
+  </div>
+</div>

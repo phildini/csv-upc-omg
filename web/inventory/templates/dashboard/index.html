@@ -5,74 +5,157 @@
 {% block content %}
 <h1 class="text-3xl font-bold mb-6">Inventory Dashboard</h1>
 
+{# Alert Badges #}
+{% if stats.low_stock_count or stats.expiring_soon_count or stats.expired_count %}
+<div class="flex flex-wrap gap-2 mb-6">
+  {% if stats.expired_count %}
+  <a href="{% url 'item-list' %}?status=expired" class="badge badge-error gap-1 cursor-pointer">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    {{ stats.expired_count }} expired
+  </a>
+  {% endif %}
+  {% if stats.expiring_soon_count %}
+  <a href="{% url 'item-list' %}?status=expiring_soon" class="badge badge-warning gap-1 cursor-pointer">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    {{ stats.expiring_soon_count }} expiring soon
+  </a>
+  {% endif %}
+  {% if stats.low_stock_count %}
+  <a href="{% url 'item-list' %}?status=low_stock" class="badge badge-warning gap-1 cursor-pointer">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+    </svg>
+    {{ stats.low_stock_count }} low stock
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
 {# Stats Row #}
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
   <div class="stats shadow bg-base-100">
     <div class="stat">
       <div class="stat-figure text-primary">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
       </div>
-      <div class="stat-title">Total Uploads</div>
-      <div class="stat-value text-primary">{{ stats.total_uploads }}</div>
+      <div class="stat-title">Total Items</div>
+      <div class="stat-value text-primary">{{ stats.total_items }}</div>
+      <div class="stat-desc">{{ stats.low_stock_count }} low stock</div>
     </div>
   </div>
 
   <div class="stats shadow bg-base-100">
     <div class="stat">
       <div class="stat-figure text-secondary">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/>
+        </svg>
       </div>
-      <div class="stat-title">Total Lookups</div>
-      <div class="stat-value text-secondary">{{ stats.total_lookups }}</div>
+      <div class="stat-title">Products Catalogued</div>
+      <div class="stat-value text-secondary">{{ stats.total_products }}</div>
+    </div>
+  </div>
+
+  <div class="stats shadow bg-base-100">
+    <div class="stat">
+      <div class="stat-figure text-info">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+      <div class="stat-title">Locations</div>
+      <div class="stat-value text-info">{{ stats.total_locations }}</div>
     </div>
   </div>
 
   <div class="stats shadow bg-base-100">
     <div class="stat">
       <div class="stat-figure text-accent">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+        </svg>
       </div>
-      <div class="stat-title">Success Rate</div>
+      <div class="stat-title">CSV Success Rate</div>
       <div class="stat-value text-accent">{{ stats.success_rate|floatformat:1 }}%</div>
     </div>
   </div>
 </div>
 
-{# Recent uploads #}
-<div class="card bg-base-100 shadow-sm">
+{# Quick Actions #}
+<div class="flex flex-wrap gap-2 mb-8">
+  <a href="{% url 'scan' %}" class="btn btn-primary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 018.07 4H19a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+    Scan UPC
+  </a>
+  <a href="{% url 'item-create' %}" class="btn btn-secondary">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    Add Item
+  </a>
+  <a href="{% url 'location-list' %}" class="btn btn-ghost">Manage Locations</a>
+  <a href="{% url 'product-list' %}" class="btn btn-ghost">Browse Catalogue</a>
+</div>
+
+{# Recent Inventory Items #}
+<div class="card bg-base-100 shadow-sm mb-6">
   <div class="card-body">
-    <h2 class="card-title mb-2">Recent Uploads</h2>
-    {% if stats.recent_uploads %}
+    <div class="flex justify-between items-center">
+      <h2 class="card-title">Recent Items</h2>
+      <a href="{% url 'item-list' %}" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+    {% if stats.recent_items %}
     <div class="overflow-x-auto">
       <table class="table table-zebra w-full">
         <thead>
           <tr>
-            <th>Filename</th>
+            <th>Product</th>
+            <th>Location</th>
+            <th>Qty</th>
+            <th>Expires</th>
             <th>Status</th>
-            <th>Rows</th>
-            <th>Processed</th>
-            <th>Created</th>
-            <th class="w-24"></th>
           </tr>
         </thead>
         <tbody>
-          {% for upload in stats.recent_uploads %}
+          {% for item in stats.recent_items %}
           <tr class="hover">
             <td>
-              <a href="{% url 'upload-detail' upload.id %}" class="link link-primary">
-                {{ upload.filename }}
+              <a href="{% url 'product-detail' item.product.upc %}" class="link link-primary">
+                {{ item.product.title }}
               </a>
             </td>
+            <td class="text-sm">{{ item.location.name|default:"—" }}</td>
             <td>
-              <div class="badge badge-{% if upload.status == 'completed' %}success{% elif upload.status == 'failed' %}error{% elif upload.status == 'processing' %}warning{% else %}ghost{% endif %} gap-1">
-                {{ upload.get_status_display }}
-              </div>
+              <form method="post" action="{% url 'item-use' item.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-xs btn-ghost" title="Use one">−</button>
+              </form>
+              <span class="mx-1">{{ item.quantity }}</span>
+              <form method="post" action="{% url 'item-restock' item.id %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="quantity" value="1" />
+                <button type="submit" class="btn btn-xs btn-ghost" title="Restock one">+</button>
+              </form>
             </td>
-            <td>{{ upload.total_rows }}</td>
-            <td>{{ upload.processed_rows }}</td>
-            <td class="text-sm opacity-60">{{ upload.created_at|date:"M d, Y H:i" }}</td>
+            <td class="text-sm">{{ item.expiry_date|date:"M d, Y"|default:"—" }}</td>
             <td>
-              <a href="{% url 'upload-detail' upload.id %}" class="btn btn-ghost btn-xs">View</a>
+              {% if item.is_expired %}
+              <span class="badge badge-error badge-sm">expired</span>
+              {% elif item.is_low_stock %}
+              <span class="badge badge-warning badge-sm">low</span>
+              {% else %}
+              <span class="badge badge-success badge-sm">OK</span>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -81,8 +164,16 @@
     </div>
     {% else %}
     <div class="py-8 text-center">
-      <p class="text-base-content/60 mb-4">No uploads yet.</p>
-      <a href="{% url 'upload-create' %}" class="btn btn-primary">Upload your first CSV</a>
+      <p class="text-base-content/60 mb-4">No inventory items yet.</p>
+      <div class="flex gap-2 justify-center">
+        <a href="{% url 'scan' %}" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Scan a UPC
+        </a>
+        <a href="{% url 'item-create' %}" class="btn btn-ghost">Add Manually</a>
+      </div>
     </div>
     {% endif %}
   </div>
