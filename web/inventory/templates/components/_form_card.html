@@ -9,16 +9,16 @@ Required context:
   - submit_text: Text for the submit button
   - form: The Django form object (must be in context)
 #}
-<div class="card bg-base-100 shadow-sm">
+<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-200">
   <div class="card-body">
     {% if form_title %}
-    <h2 class="card-title mb-2">{{ form_title }}</h2>
+    <h2 class="card-title mb-4">{{ form_title }}</h2>
     {% endif %}
-    <form method="post">
+    <form method="post" class="space-y-4">
       {% csrf_token %}
 
       {% for field in form %}
-      <div class="form-control w-full mb-4">
+      <div class="form-control w-full">
         <label class="label">
           <span class="label-text font-medium">{{ field.label }}</span>
         </label>
@@ -33,8 +33,8 @@ Required context:
       {% endfor %}
 
       <div class="card-actions justify-end mt-6">
-        <a href="{{ cancel_url }}" class="btn btn-ghost">Cancel</a>
-        <button type="submit" class="btn btn-primary">{{ submit_text }}</button>
+        <a href="{{ cancel_url }}" class="btn btn-ghost hover:shadow-md transition-shadow duration-200">Cancel</a>
+        <button type="submit" class="btn btn-primary hover:shadow-md transition-shadow duration-200">{{ submit_text }}</button>
       </div>
     </form>
   </div>

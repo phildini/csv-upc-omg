@@ -1,79 +1,88 @@
 {% extends "base.html" %}
 
-{% block title %}{{ product.title }} — Catalogue{% endblock %}
+{% block title %}{{ product.title }} — csv-upc-omg{% endblock %}
 
 {% block content %}
-<div class="flex flex-col lg:flex-row gap-6">
-  {# Product Details #}
-  <div class="flex-1">
-    <a href="{% url 'product-list' %}" class="link link-sm mb-4">← Back to Catalogue</a>
+<div class="max-w-4xl mx-auto">
+  <div class="flex justify-between items-start mb-6">
+    <h1 class="text-3xl font-bold">{{ product.title }}</h1>
+    <a href="{% url 'product-list' %}" class="btn btn-ghost btn-sm">← Back to Catalogue</a>
+  </div>
 
-    <div class="card bg-base-100 shadow-sm">
-      <div class="card-body">
-        <div class="flex gap-6">
+  <div class="card bg-base-100 shadow-sm mb-6 hover:shadow-md transition-shadow duration-200">
+    <div class="card-body">
+      <div class="flex flex-col md:flex-row gap-6">
+        <div class="md:w-1/3">
           {% if product.image_url %}
-          <div class="w-32 h-32 flex-shrink-0 bg-base-200 rounded-lg overflow-hidden">
-            <img src="{{ product.image_url }}" alt="{{ product.title }}" class="w-full h-full object-cover" onerror="this.parentElement.style.display='none'" />
+          <img src="{{ product.image_url }}" alt="{{ product.title }}" class="w-full rounded-lg shadow-sm" />
+          {% else %}
+          <div class="bg-base-200 border-2 border-dashed rounded-xl w-full h-64 flex items-center justify-center">
+            <span class="text-base-content/40">No image available</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="md:w-2/3">
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold mb-2">Details</h2>
+            <ul class="space-y-2">
+              {% if product.brand %}
+              <li><span class="font-medium">Brand:</span> {{ product.brand }}</li>
+              {% endif %}
+              {% if product.category %}
+              <li><span class="font-medium">Category:</span> {{ product.category }}</li>
+              {% endif %}
+              {% if product.upc %}
+              <li><span class="font-medium">UPC:</span> <code>{{ product.upc }}</code></li>
+              {% endif %}
+            </ul>
+          </div>
+
+          {% if product.description %}
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold mb-2">Description</h2>
+            <p class="text-base-content/80">{{ product.description }}</p>
           </div>
           {% endif %}
 
-          <div>
-            <h1 class="text-2xl font-bold">{{ product.title }}</h1>
-            {% if product.brand %}
-            <p class="text-base-content/70">Brand: {{ product.brand }}</p>
-            {% endif %}
-            {% if product.category %}
-            <p class="text-base-content/60">Category: {{ product.category }}</p>
-            {% endif %}
-            <p class="text-sm font-mono text-base-content/40 mt-2">UPC: {{ product.upc }}</p>
-            <div class="mt-2">
-              <span class="badge badge-outline">{{ product.get_source_display }}</span>
+          <div class="mt-6">
+            <h2 class="text-lg font-semibold mb-2">Inventory Items</h2>
+            {% if user_items %}
+            <div class="overflow-x-auto">
+              <table class="table table-zebra w-full">
+                <thead>
+                  <tr>
+                    <th>Location</th>
+                    <th>Quantity</th>
+                    <th>Expiry Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in user_items %}
+                  <tr>
+                    <td>{{ item.location.name|default:"—" }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.expiry_date|date:"M d, Y"|default:"—" }}</td>
+                    <td>
+                      {% if item.is_expired %}
+                      <span class="badge badge-error badge-sm">expired</span>
+                      {% elif item.is_low_stock %}
+                      <span class="badge badge-warning badge-sm">low</span>
+                      {% else %}
+                      <span class="badge badge-success badge-sm">OK</span>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
             </div>
+            {% else %}
+            <p class="text-base-content/60">No inventory items found for this product.</p>
+            {% endif %}
           </div>
         </div>
-
-        {% if product.description %}
-        <div class="divider"></div>
-        <p class="text-base-content/80">{{ product.description }}</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-
-  {# My Inventory for this Product #}
-  <div class="w-full lg:w-80">
-    <div class="card bg-base-100 shadow-sm lg:sticky lg:top-20">
-      <div class="card-body">
-        <h2 class="card-title">My Inventory</h2>
-        {% if user_items %}
-          {% for item in user_items %}
-          <div class="py-2 border-b last:border-b-0">
-            <div class="flex justify-between items-center">
-              <div>
-                <p class="text-sm font-medium">
-                  {% if item.location %}{{ item.location.name }}{% else %}No location{% endif %}
-                </p>
-                <p class="text-xs text-base-content/50">
-                  Qty: {{ item.quantity }}{% if item.expiry_date %} · Expires: {{ item.expiry_date|date:"M d, Y" }}{% endif %}
-                </p>
-              </div>
-              {% if item.is_expired %}
-              <span class="badge badge-error badge-sm">expired</span>
-              {% elif item.is_low_stock %}
-              <span class="badge badge-warning badge-sm">low</span>
-              {% else %}
-              <span class="badge badge-success badge-sm">stocked</span>
-              {% endif %}
-            </div>
-          </div>
-          {% endfor %}
-          <a href="{% url 'scan' %}" class="btn btn-sm btn-primary mt-4">+ Add More</a>
-        {% else %}
-          <p class="text-base-content/60 text-sm py-4">
-            You don't have any of this product in your inventory.
-          </p>
-          <a href="{% url 'scan' %}" class="btn btn-sm btn-primary">Scan UPC to Add</a>
-        {% endif %}
       </div>
     </div>
   </div>
