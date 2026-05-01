@@ -18,3 +18,40 @@ CSRF_COOKIE_SECURE = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+
+# Override MEDIA_ROOT for Fly volume
+MEDIA_ROOT = env("MEDIA_ROOT", default="/data/media")
+
+# Configure CSRF for custom domain and Fly.io
+CSRF_TRUSTED_ORIGINS = [
+    "https://omgupc.com",
+    "https://*.fly.dev",
+]
+
+# Configure proxy headers for Fly.io
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Production logging
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+    "django": {
+        "handlers": ["console"],
+        "level": "INFO",
+        "propagate": False,
+    },
+    "django.request": {
+        "handlers": ["console"],
+        "level": "WARNING",
+        "propagate": False,
+    },
+}

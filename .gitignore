@@ -28,3 +28,6 @@ htmlcov/
 # pytest
 .pytest_cache/
 .DS_Store
+
+# Deployment test files (exclude only test scripts)
+test_docker_build.sh

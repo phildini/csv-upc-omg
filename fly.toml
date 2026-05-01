@@ -1,0 +1,35 @@
+app = "csv-upc-omg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[[mounts]]
+  source = "csv_upc_omg_data"
+  destination = "/data"
+
+[env]
+  DJANGO_SETTINGS_MODULE = "config.settings.production"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
