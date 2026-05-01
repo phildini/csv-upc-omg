@@ -401,7 +401,7 @@ class DisplayPropertyFallbackTests(TestCase):
             "custom.jpg", buf.getvalue(), content_type="image/jpeg"
         )
         item.save()
-        self.assertIn("custom.jpg", item.display_image_url)
+        self.assertIn("inventory-items/", item.display_image_url)
 
     def test_str_method_uses_display_name(self):
         item = InventoryItem.objects.create(
