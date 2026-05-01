@@ -390,8 +390,53 @@ class ScanInventoryFlowTests(TestCase):
         """GET /scan/ renders the scan page."""
         resp = self.client.get("/scan/")
         self.assertEqual(resp.status_code, 200)
-        # Updated to match new UI - the page title is now "Scan UPC"
-        self.assertContains(resp, "Scan UPC")
+        # Updated to match new UI - the page title is now "Scan Barcode"
+        self.assertContains(resp, "Scan Barcode")
+
+    def test_scan_page_includes_camera_scanner(self):
+        """GET /scan/ includes camera scanning UI elements."""
+        resp = self.client.get("/scan/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Start Camera")
+        self.assertContains(resp, "html5-qrcode")
+        self.assertContains(resp, 'id="reader"')
+
+    def test_scan_page_includes_manual_entry(self):
+        """GET /scan/ includes manual UPC entry form."""
+        resp = self.client.get("/scan/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Manual Entry")
+        self.assertContains(resp, "manual-upc")
+
+    def test_scan_page_includes_recent_scans_sidebar(self):
+        """GET /scan/ includes recent scans sidebar."""
+        resp = self.client.get("/scan/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Recent Scans")
+        self.assertContains(resp, "recent-scans")
+
+    def test_scan_result_contains_htmx_form(self):
+        """POST to scan with found product returns HTMX-powered product form."""
+        with patch("inventory.services.fetch_product_details_sync") as mock_api:
+            mock_api.return_value = {
+                "title": "Test Widget",
+                "brand": "TestBrand",
+                "category": "TestCategory",
+                "description": "",
+                "image_url": "",
+                "source": "upcitemdb",
+            }
+            resp = self.client.post(
+                "/scan/",
+                {"upc": "012345678905"},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        # The form must have hx-post for HTMX to work
+        self.assertContains(resp, "hx-post")
+        # It must target a container to inject result after creation
+        self.assertContains(resp, "hx-target")
 
     def test_scan_requires_auth(self):
         self.client.logout()
