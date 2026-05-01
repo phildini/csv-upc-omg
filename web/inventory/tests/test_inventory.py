@@ -390,8 +390,53 @@ class ScanInventoryFlowTests(TestCase):
         """GET /scan/ renders the scan page."""
         resp = self.client.get("/scan/")
         self.assertEqual(resp.status_code, 200)
-        # Updated to match new UI - the page title is now "Scan UPC"
-        self.assertContains(resp, "Scan UPC")
+        # Updated to match new UI - the page title is now "Scan Barcode"
+        self.assertContains(resp, "Scan Barcode")
+
+    def test_scan_page_includes_camera_scanner(self):
+        """GET /scan/ includes camera scanning UI elements."""
+        resp = self.client.get("/scan/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Start Camera")
+        self.assertContains(resp, "html5-qrcode")
+        self.assertContains(resp, 'id="reader"')
+
+    def test_scan_page_includes_manual_entry(self):
+        """GET /scan/ includes manual UPC entry form."""
+        resp = self.client.get("/scan/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Manual Entry")
+        self.assertContains(resp, "manual-upc")
+
+    def test_scan_page_includes_recent_scans_sidebar(self):
+        """GET /scan/ includes recent scans sidebar."""
+        resp = self.client.get("/scan/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Recent Scans")
+        self.assertContains(resp, "recent-scans")
+
+    def test_scan_result_contains_htmx_form(self):
+        """POST to scan with found product returns HTMX-powered product form."""
+        with patch("inventory.services.fetch_product_details_sync") as mock_api:
+            mock_api.return_value = {
+                "title": "Test Widget",
+                "brand": "TestBrand",
+                "category": "TestCategory",
+                "description": "",
+                "image_url": "",
+                "source": "upcitemdb",
+            }
+            resp = self.client.post(
+                "/scan/",
+                {"upc": "012345678905"},
+                HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        # The form must have hx-post for HTMX to work
+        self.assertContains(resp, "hx-post")
+        # It must target a container to inject result after creation
+        self.assertContains(resp, "hx-target")
 
     def test_scan_requires_auth(self):
         self.client.logout()
@@ -657,3 +702,318 @@ class DashboardTests(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "0")  # total_items
+
+
+# ── Item Overrides (custom_name, photo, custom_description) ──────────
+
+
+class ItemOverrideTests(TestCase):
+    """Tests for per-item override fields and display properties."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="overuser", password="pass")
+        self.client.login(username="overuser", password="pass")
+        self.catalogue_product = UPCProduct.objects.create(
+            upc="012345678905",
+            title="Catalogue Widget",
+            brand="CatalogueBrand",
+            description="Official product description from API",
+            image_url="https://example.com/catalogue-image.jpg",
+            source="upcitemdb",
+        )
+        self.location = Location.objects.create(user=self.user, name="Shelf A")
+
+    def test_display_name_falls_back_to_catalogue(self):
+        item = InventoryItem.objects.create(
+            user=self.user, product=self.catalogue_product, quantity=1
+        )
+        self.assertEqual(item.display_name, "Catalogue Widget")
+
+    def test_display_name_uses_custom_when_set(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            custom_name="My Custom Name",
+        )
+        self.assertEqual(item.display_name, "My Custom Name")
+
+    def test_display_description_falls_back_to_catalogue(self):
+        item = InventoryItem.objects.create(
+            user=self.user, product=self.catalogue_product, quantity=1
+        )
+        self.assertEqual(
+            item.display_description, "Official product description from API"
+        )
+
+    def test_display_description_uses_custom_when_set(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            custom_description="My special notes about this item",
+        )
+        self.assertEqual(item.display_description, "My special notes about this item")
+
+    def test_display_image_url_falls_back_to_catalogue(self):
+        item = InventoryItem.objects.create(
+            user=self.user, product=self.catalogue_product, quantity=1
+        )
+        self.assertEqual(
+            item.display_image_url, "https://example.com/catalogue-image.jpg"
+        )
+
+    def test_display_image_url_uses_photo_when_set(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        import io
+        from PIL import Image
+
+        img = Image.new("RGB", (100, 100), color="red")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
+
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            photo=SimpleUploadedFile(
+                "test.jpg", buf.getvalue(), content_type="image/jpeg"
+            ),
+        )
+        self.assertTrue(item.display_image_url.startswith("/media/inventory-items/"))
+
+    def test_str_uses_display_name(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=2,
+            custom_name="Custom Override",
+        )
+        self.assertEqual(str(item), "Custom Override (x2)")
+
+    def test_item_edit_form_shows_current_photo(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+        )
+        resp = self.client.get(f"/items/{item.id}/edit/")
+        self.assertEqual(resp.status_code, 200)
+        # Catalogue image is shown as fallback
+        self.assertContains(resp, "Current Photo")
+
+    def test_item_edit_form_shows_custom_name_hint(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+        )
+        resp = self.client.get(f"/items/{item.id}/edit/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Leave blank to use catalogue name")
+
+    def test_item_create_with_custom_name(self):
+        before = InventoryItem.objects.count()
+        resp = self.client.post(
+            "/items/create/",
+            {
+                "product": str(self.catalogue_product.id),
+                "quantity": 3,
+                "location": str(self.location.id),
+                "low_stock_threshold": 1,
+                "custom_name": "My Custom Item",
+                "custom_description": "This is my custom description",
+            },
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(InventoryItem.objects.count(), before + 1)
+        item = InventoryItem.objects.get(custom_name="My Custom Item")
+        self.assertEqual(item.custom_description, "This is my custom description")
+        self.assertEqual(item.display_name, "My Custom Item")
+
+    def test_item_edit_update_custom_name(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            custom_name="Old Name",
+        )
+        resp = self.client.post(
+            f"/items/{item.id}/edit/",
+            {
+                "product": str(self.catalogue_product.id),
+                "quantity": 1,
+                "location": str(self.location.id),
+                "low_stock_threshold": 1,
+                "custom_name": "New Name",
+            },
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        item.refresh_from_db()
+        self.assertEqual(item.custom_name, "New Name")
+        self.assertEqual(item.display_name, "New Name")
+
+    def test_item_edit_update_custom_description(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            location=self.location,
+            custom_description="Old description",
+        )
+        resp = self.client.post(
+            f"/items/{item.id}/edit/",
+            {
+                "product": str(self.catalogue_product.id),
+                "quantity": 1,
+                "location": str(self.location.id),
+                "low_stock_threshold": 1,
+                "custom_description": "Updated description",
+            },
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        item.refresh_from_db()
+        self.assertEqual(item.custom_description, "Updated description")
+
+    def test_item_edit_clear_custom_name(self):
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            location=self.location,
+            custom_name="Override Name",
+        )
+        resp = self.client.post(
+            f"/items/{item.id}/edit/",
+            {
+                "product": str(self.catalogue_product.id),
+                "quantity": 1,
+                "location": str(self.location.id),
+                "low_stock_threshold": 1,
+                "custom_name": "",
+            },
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        item.refresh_from_db()
+        self.assertEqual(item.custom_name, "")
+        self.assertEqual(item.display_name, "Catalogue Widget")
+
+    def test_item_list_uses_display_name_in_search(self):
+        _item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            custom_name="Very Specific Custom Name",
+        )
+        resp = self.client.get("/items/?q=Very Specific")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Very Specific Custom Name")
+
+    def test_item_list_uses_display_image(self):
+        _item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+        )
+        # The table should use display_image_url
+        from inventory.tables import InventoryTable
+
+        table = InventoryTable(InventoryItem.objects.filter(user=self.user))
+        table.rows[0].get_cell("image")
+        # Access via render method
+        self.assertIn("catalogue-image.jpg", table.rows[0].get_cell("image"))
+
+    def test_item_photo_upload_creates_file(self):
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        img = Image.new("RGB", (200, 200), color="blue")
+        buf = BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
+        photo_file = SimpleUploadedFile(
+            "my-photo.jpg",
+            buf.getvalue(),
+            content_type="image/jpeg",
+        )
+
+        item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.catalogue_product,
+            quantity=1,
+            photo=photo_file,
+        )
+        self.assertTrue(item.photo)
+
+
+class CatalogueDetailShowsOverrides(TestCase):
+    """Catalogue detail page shows per-item override content."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="ovrduser", password="pass")
+        self.client.login(username="ovrduser", password="pass")
+        self.product = UPCProduct.objects.create(
+            upc="012345678905",
+            title="Original Product",
+            description="Original API description",
+            image_url="https://example.com/orig.jpg",
+            source="upcitemdb",
+        )
+        self.item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.product,
+            quantity=1,
+            custom_name="My Renamed Product",
+            custom_description="My custom description here",
+        )
+
+    def test_catalogue_detail_shows_custom_name_badge(self):
+        resp = self.client.get(f"/catalogue/{self.product.upc}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "My Renamed Product")
+        self.assertContains(resp, "custom")
+
+    def test_catalogue_detail_shows_custom_description(self):
+        resp = self.client.get(f"/catalogue/{self.product.upc}/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "My custom description here")
+
+
+class ItemOverrideAdminTests(TestCase):
+    """Admin interface shows override fields."""
+
+    def setUp(self):
+        self.admin = User.objects.create_superuser(
+            username="admin", email="admin@example.com", password="adminpass"
+        )
+        self.user = User.objects.create_user(username="admintest", password="pass")
+        self.product = UPCProduct.objects.create(
+            upc="012345678905",
+            title="Admin Test Product",
+            source="manual",
+        )
+        self.item = InventoryItem.objects.create(
+            user=self.user,
+            product=self.product,
+            quantity=1,
+            custom_name="Admin Override Name",
+            custom_description="Admin Override Description",
+        )
+        self.client.login(username="admin", password="adminpass")
+
+    def test_admin_list_displays_overrides(self):
+        resp = self.client.get("/admin/inventory/inventoryitem/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Admin Override Name")
+
+    def test_admin_detail_shows_preview(self):
+        resp = self.client.get(f"/admin/inventory/inventoryitem/{self.item.pk}/change/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Admin Override Name")
+        self.assertContains(resp, "Admin Override Description")

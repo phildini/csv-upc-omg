@@ -1,95 +1,153 @@
 {% extends "base.html" %}
 
-{% block title %}Scan UPC — csv-upc-omg{% endblock %}
+{% block title %}Scan — csv-upc-omg{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-  <h1 class="text-3xl font-bold mb-6">Scan UPC</h1>
+<div class="flex flex-col lg:flex-row gap-6">
+  <div class="flex-1">
+    <h1 class="text-3xl font-bold mb-2">Scan Barcode</h1>
+    <p class="text-base-content/60 mb-6">Point your camera at a barcode or enter a UPC manually.</p>
 
-  <div class="card bg-base-100 shadow-sm mb-6 hover:shadow-md transition-shadow duration-200">
-    <div class="card-body">
-      <form id="scan-form" class="space-y-4">
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Enter UPC manually</span>
-          </label>
-          <div class="flex gap-2">
-            <input type="text" id="upc-input" name="upc" placeholder="Enter UPC code" class="input input-bordered flex-1" />
-            <button type="submit" class="btn btn-primary flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Search
-            </button>
-          </div>
+    <div class="card bg-base-100 shadow-sm mb-6">
+      <div class="card-body">
+        <div id="reader" class="w-full max-w-md mx-auto rounded-lg overflow-hidden bg-base-300"></div>
+        <div class="flex gap-2 mt-4">
+          <button id="start-btn" class="btn btn-primary btn-sm" onclick="startCamera()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 018.07 4H19a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            Start Camera
+          </button>
+          <button id="stop-btn" class="btn btn-error btn-sm btn-disabled" onclick="stopCamera()" disabled>
+            Stop
+          </button>
         </div>
-      </form>
+      </div>
+    </div>
 
-      <div id="result-area" class="mt-4">
-        <!-- Results will be loaded here -->
+    <div class="divider">OR</div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body">
+        <h2 class="card-title mb-4">Manual Entry</h2>
+        {% csrf_token %}
+        <label class="form-control w-full">
+          <input type="text" id="manual-upc" placeholder="Enter UPC (e.g. 012345678905)"
+                 pattern="[0-9]{12,14}" maxlength="14"
+                 class="input input-bordered w-full" />
+        </label>
+        <button onclick="submitManual()" class="btn btn-primary mt-2 w-full">Lookup</button>
+
+        <div id="result-area" class="mt-4"></div>
       </div>
     </div>
   </div>
 
-  <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow duration-200">
-    <div class="card-body">
-      <h2 class="card-title mb-4">Recent Scans</h2>
-      <div id="history-container">
-        {% include "scan/_history_items.html" %}
+  <div class="w-full lg:w-80">
+    <div class="card bg-base-100 shadow-sm lg:sticky lg:top-20">
+      <div class="card-body">
+        <h2 class="card-title text-lg">Recent Scans</h2>
+        <div id="recent-scans">
+          {% include "scan/_history_items.html" with scans=user.scans.all|slice:":5" %}
+        </div>
+        <a href="{% url 'scan-history' %}" class="btn btn-ghost btn-sm mt-2">View All</a>
       </div>
     </div>
   </div>
 </div>
 
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-document.getElementById('scan-form').addEventListener('submit', function(e) {
-  e.preventDefault();
-  const upc = document.getElementById('upc-input').value.trim();
+let html5QrCode = null;
+let scanning = false;
+let lastScanned = '';
 
-  if (!upc) {
-    return;
-  }
-
-  // Show loading indicator
-  const resultArea = document.getElementById('result-area');
-  resultArea.innerHTML = '<div class="text-center py-8"><div class="loading loading-spinner loading-md mx-auto"></div></div>';
-
-  // Make AJAX request
-  fetch('{% url "scan" %}', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-    },
-    body: `upc=${encodeURIComponent(upc)}`
-  })
-  .then(response => response.text())
-  .then(html => {
-    resultArea.innerHTML = html;
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    resultArea.innerHTML = '<div class="alert alert-error">An error occurred. Please try again.</div>';
-  });
-});
-
-// Auto-refresh the scan history
-function refreshScanHistory() {
-  fetch('{% url "scan-history" %}', {
-    headers: {
-      'HX-Request': 'true'
+async function startCamera() {
+  try {
+    html5QrCode = new Html5Qrcode('reader');
+    const devices = await Html5Qrcode.getCameras();
+    if (!devices.length) {
+      document.getElementById('result-area').innerHTML =
+        '<div class="alert alert-warning">No cameras found.</div>';
+      return;
     }
-  })
-  .then(response => response.text())
-  .then(html => {
-    document.getElementById('history-container').innerHTML = html;
-  });
+
+    const backCamera = devices.find(d => d.label.toLowerCase().includes('back')) || devices[0];
+
+    await html5QrCode.start(
+      backCamera.id,
+      { fps: 10, qrbox: { width: 300, height: 150 }, aspectRatio: 2.0 },
+      onScanSuccess,
+      () => {}
+    );
+    scanning = true;
+    document.getElementById('start-btn').classList.add('hidden');
+    document.getElementById('stop-btn').classList.remove('btn-disabled');
+    document.getElementById('stop-btn').disabled = false;
+  } catch (err) {
+    document.getElementById('result-area').innerHTML =
+      `<div class="alert alert-error">Camera error: ${err}</div>`;
+  }
 }
 
-// Refresh every 30 seconds
-setInterval(refreshScanHistory, 30000);
+function stopCamera() {
+  if (html5QrCode && scanning) {
+    html5QrCode.stop().then(() => {
+      scanning = false;
+      document.getElementById('start-btn').classList.remove('hidden');
+      document.getElementById('stop-btn').classList.add('btn-disabled');
+      document.getElementById('stop-btn').disabled = true;
+      html5QrCode.clear();
+    });
+  }
+}
 
-// Also refresh on page load
-window.addEventListener('load', refreshScanHistory);
+function onScanSuccess(decodedText) {
+  if (decodedText === lastScanned) return;
+  lastScanned = decodedText;
+
+  const upc = decodedText.replace(/[^0-9]/g, '');
+  if (upc.length < 8) return;
+
+  document.getElementById('result-area').innerHTML =
+    `<div class="alert alert-info alert-sm py-2"><span>Scanned: <code class="font-mono text-sm">${upc}</code></span></div>`;
+
+  submitUPC(upc);
+  setTimeout(() => { lastScanned = ''; }, 2000);
+}
+
+function submitManual() {
+  const upc = document.getElementById('manual-upc').value.trim();
+  if (upc) submitUPC(upc);
+}
+
+function submitUPC(upc) {
+  document.getElementById('result-area').innerHTML =
+    '<div class="flex items-center gap-3 p-3"><span class="loading loading-spinner loading-sm"></span><span>Looking up...</span></div>';
+
+  const formData = new FormData();
+  formData.append('upc', upc);
+  formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+  fetch("{% url 'scan' %}", {
+    method: "POST",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    body: formData,
+  })
+  .then((r) => r.text())
+  .then((html) => {
+    document.getElementById("result-area").innerHTML = html;
+    if (window.htmx) {
+      htmx.process(document.getElementById("result-area"));
+    }
+    document.getElementById("manual-upc").value = "";
+    htmx.ajax("GET", "{% url 'scan-history' %}", { target: "#recent-scans" });
+  })
+  .catch(() => {
+    document.getElementById("result-area").innerHTML =
+      '<div class="alert alert-error alert-sm">Lookup failed.</div>';
+  });
+}
 </script>
 {% endblock %}

@@ -1,37 +1,175 @@
 {% extends "base.html" %}
 
-{% block title %}{% if form.instance.pk %}Edit{% else %}Add{% endif %} Item — csv-upc-omg{% endblock title %}
+{% block title %}{% if is_update %}Edit{% else %}Add{% endif %} Item — csv-upc-omg{% endblock title %}
 
 {% block content %}
 <div class="max-w-lg mx-auto">
   <h1 class="text-3xl font-bold mb-6">
-    {% if form.instance.pk %}Edit Item{% else %}Add New Item{% endif %}
+    {% if is_update %}Edit Item{% else %}Add New Item{% endif %}
   </h1>
 
-  <form hx-post="{% url 'item-create' %}"
-        hx-target="#form-container"
+  <form hx-post="{% if is_update %}{% url 'inventory-item-edit' item.pk %}{% else %}{% url 'item-create' %}{% endif %}"
+        hx-target="#item-form-card"
         hx-swap="outerHTML"
-        hx-indicator="#form-container"
+        hx-indicator="#item-form-card"
         hx-trigger="submit"
+        hx-encoding="multipart/form-data"
+        id="item-form-card"
         class="card bg-base-100 shadow-sm">
     {% csrf_token %}
     <div class="card-body">
-      {% for field in form %}
+
+      {% if is_update %}
       <div class="form-control w-full mb-4">
         <label class="label">
-          <span class="label-text font-medium">{{ field.label }}</span>
+          <span class="label-text font-medium">Current Photo</span>
         </label>
-        {{ field }}
-        {% if field.errors %}
-        <div class="text-error text-sm mt-1">{{ field.errors.as_text }}</div>
+        {% if item.photo %}
+          <div class="mb-2">
+            <img src="{{ item.photo.url }}" alt="Current photo" class="w-32 h-32 object-cover rounded border">
+          </div>
+        {% elif item.product.image_url %}
+          <div class="mb-2">
+            <img src="{{ item.product.image_url }}" alt="Product image" class="w-32 h-32 object-cover rounded border">
+          </div>
+        {% else %}
+          <p class="text-sm text-gray-500 mb-2">No photo uploaded</p>
+        {% endif %}
+        {{ form.photo }}
+        {% if form.photo.errors %}
+        <div class="text-error text-sm mt-1">{{ form.photo.errors.as_text }}</div>
         {% endif %}
       </div>
-      {% endfor %}
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.custom_name.label }}</span>
+        </label>
+        {{ form.custom_name }}
+        {% if form.custom_name.errors %}
+        <div class="text-error text-sm mt-1">{{ form.custom_name.errors.as_text }}</div>
+        {% endif %}
+        <p class="text-xs text-gray-500 mt-1">
+          Current: {{ item.display_name }}
+        </p>
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.custom_description.label }}</span>
+        </label>
+        {{ form.custom_description }}
+        {% if form.custom_description.errors %}
+        <div class="text-error text-sm mt-1">{{ form.custom_description.errors.as_text }}</div>
+        {% endif %}
+        {% if item.custom_description %}
+        <p class="text-xs text-gray-500 mt-1">Editing custom description</p>
+        {% else %}
+        <p class="text-xs text-gray-500 mt-1">
+          Current: {{ item.display_description|truncatewords:15 }}
+        </p>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.photo.label }}</span>
+        </label>
+        {{ form.photo }}
+        {% if form.photo.errors %}
+        <div class="text-error text-sm mt-1">{{ form.photo.errors.as_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.custom_name.label }}</span>
+        </label>
+        {{ form.custom_name }}
+        {% if form.custom_name.errors %}
+        <div class="text-error text-sm mt-1">{{ form.custom_name.errors.as_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.custom_description.label }}</span>
+        </label>
+        {{ form.custom_description }}
+        {% if form.custom_description.errors %}
+        <div class="text-error text-sm mt-1">{{ form.custom_description.errors.as_text }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if is_update %}
+      <input type="hidden" name="product" value="{{ item.product.pk }}">
+      {% endif %}
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.quantity.label }}</span>
+        </label>
+        {{ form.quantity }}
+        {% if form.quantity.errors %}
+        <div class="text-error text-sm mt-1">{{ form.quantity.errors.as_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.location.label }}</span>
+        </label>
+        {{ form.location }}
+        {% if form.location.errors %}
+        <div class="text-error text-sm mt-1">{{ form.location.errors.as_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.low_stock_threshold.label }}</span>
+        </label>
+        {{ form.low_stock_threshold }}
+        {% if form.low_stock_threshold.errors %}
+        <div class="text-error text-sm mt-1">{{ form.low_stock_threshold.errors.as_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.purchase_date.label }}</span>
+        </label>
+        {{ form.purchase_date }}
+        {% if form.purchase_date.errors %}
+        <div class="text-error text-sm mt-1">{{ form.purchase_date.errors.as_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.expiry_date.label }}</span>
+        </label>
+        {{ form.expiry_date }}
+        {% if form.expiry_date.errors %}
+        <div class="text-error text-sm mt-1">{{ form.expiry_date.errors.as_text }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-control w-full mb-4">
+        <label class="label">
+          <span class="label-text font-medium">{{ form.notes.label }}</span>
+        </label>
+        {{ form.notes }}
+        {% if form.notes.errors %}
+        <div class="text-error text-sm mt-1">{{ form.notes.errors.as_text }}</div>
+        {% endif %}
+      </div>
 
       <div class="card-actions justify-end mt-6">
         <a href="{% url 'item-list' %}" class="btn btn-ghost">Cancel</a>
         <button type="submit" class="btn btn-primary">
-          {% if form.instance.pk %}Save Changes{% else %}Add Item{% endif %}
+          {% if is_update %}Save Changes{% else %}Add Item{% endif %}
         </button>
       </div>
     </div>

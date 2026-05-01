@@ -281,6 +281,7 @@ class ItemListView(LoginRequiredMixin, SingleTableView):
                 models.Q(product__title__icontains=search)
                 | models.Q(product__brand__icontains=search)
                 | models.Q(product__upc__icontains=search)
+                | models.Q(custom_name__icontains=search)
             )
 
         return qs
@@ -302,15 +303,21 @@ class InventoryItemFormMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        instance = self.get_object() if hasattr(self, "get_object") else None
-        context["card_title"] = (
-            "Edit Item" if instance and instance.pk else "Add New Item"
-        )
+        context["card_title"] = self.get_card_title()
         context["cancel_url"] = reverse_lazy("item-list")
-        context["submit_text"] = (
-            "Save Changes" if instance and instance.pk else "Add Item"
-        )
+        context["submit_text"] = "Save Changes" if self.is_update_view() else "Add Item"
+        context["is_update"] = self.is_update_view()
+        if self.is_update_view() and hasattr(self, "object") and self.object:
+            context["item"] = self.object
         return context
+
+    def get_card_title(self):
+        if self.is_update_view():
+            return "Edit Item"
+        return "Add New Item"
+
+    def is_update_view(self):
+        return isinstance(self, UpdateView)
 
 
 class ItemCreateView(LoginRequiredMixin, InventoryItemFormMixin, CreateView):
@@ -333,6 +340,38 @@ class ItemUpdateView(LoginRequiredMixin, InventoryItemFormMixin, UpdateView):
     def get_queryset(self):
         return InventoryItem.objects.filter(user=self.request.user)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_update"] = True
+        return context
+
+    def form_valid(self, form):
+        photo = self.request.FILES.get("photo")
+        photo_clear = self.request.POST.get("photo-clear")
+        if photo_clear:
+            old = self.get_object()
+            if old.photo:
+                old.photo.delete(save=False)
+        if photo:
+            form.instance.photo = photo
+        return super().form_valid(form)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["product"] = self.get_object().product.pk
+        return initial
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        if self.request.method == "POST":
+            post_data = self.request.POST.copy()
+            if "product" not in post_data:
+                post_data["product"] = self.get_object().product.pk
+            kwargs["data"] = post_data
+            if self.request.FILES:
+                kwargs["files"] = self.request.FILES
+        return kwargs
+
 
 class ItemDeleteView(LoginRequiredMixin, DeleteView):
     model = InventoryItem
@@ -354,10 +393,10 @@ def item_use(request, pk):
         item.quantity -= 1
         item.save(update_fields=["quantity"])
         if item.quantity == 0:
-            messages.warning(request, f"{item.product.title} is now out of stock!")
+            messages.warning(request, f"{item.display_name} is now out of stock!")
         else:
             messages.success(
-                request, f"Used 1 {item.product.title}. {item.quantity} remaining."
+                request, f"Used 1 {item.display_name}. {item.quantity} remaining."
             )
     if request.headers.get("HX-Request"):
         return HttpResponse(f'<span class="badge badge-ghost">x{item.quantity}</span>')
@@ -373,7 +412,7 @@ def item_restock(request, pk):
     item.save(update_fields=["quantity"])
     messages.success(
         request,
-        f"Restocked {item.product.title}. {item.quantity} total.",
+        f"Restocked {item.display_name}. {item.quantity} total.",
     )
     if request.headers.get("HX-Request"):
         return HttpResponse(

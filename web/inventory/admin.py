@@ -67,13 +67,67 @@ class UPCProductAdmin(admin.ModelAdmin):
 @admin.register(InventoryItem)
 class InventoryItemAdmin(admin.ModelAdmin):
     list_display = [
-        "product",
+        "display_name",
         "user",
         "quantity",
         "location",
-        "expiry_date",
+        "has_custom_overrides",
         "created_at",
     ]
     list_filter = ["location", "created_at"]
-    search_fields = ["product__title", "product__upc", "user__username"]
-    readonly_fields = ["created_at", "updated_at"]
+    search_fields = [
+        "product__title",
+        "product__upc",
+        "user__username",
+        "custom_name",
+    ]
+    readonly_fields = ["created_at", "updated_at", "display_image_preview"]
+    fieldsets = (
+        ("Identity", {"fields": ("user", "product", "location")}),
+        (
+            "Stock",
+            {
+                "fields": (
+                    "quantity",
+                    "low_stock_threshold",
+                    "purchase_date",
+                    "expiry_date",
+                )
+            },
+        ),
+        (
+            "Overrides",
+            {
+                "fields": (
+                    "photo",
+                    "display_image_preview",
+                    "custom_name",
+                    "custom_description",
+                )
+            },
+        ),
+        ("System", {"fields": ("created_at", "updated_at")}),
+    )
+
+    def has_custom_overrides(self, obj):
+        has_photo = bool(obj.photo)
+        has_name = bool(obj.custom_name)
+        has_desc = bool(obj.custom_description)
+        parts = []
+        if has_photo:
+            parts.append("photo")
+        if has_name:
+            parts.append("name")
+        if has_desc:
+            parts.append("desc")
+        return ", ".join(parts) if parts else "—"
+
+    def display_image_preview(self, obj):
+        if obj.photo:
+            from django.utils.html import format_html
+
+            return format_html(
+                '<img src="{}" style="max-width: 200px; max-height: 200px;" />',
+                obj.photo.url,
+            )
+        return "No custom photo uploaded"
