@@ -89,10 +89,11 @@ class InventoryTable(tables.Table):
         order_by = "-created_at"
 
     def render_image(self, record):
-        if record.product.image_url:
+        image_url = record.display_image_url
+        if image_url:
             return format_html(
                 '<img src="{}" alt="Product Image" class="h-10 w-10 object-contain rounded" />',
-                record.product.image_url,
+                image_url,
             )
         return mark_safe('<span class="text-gray-400">No image</span>')
 
@@ -102,7 +103,7 @@ class InventoryTable(tables.Table):
         return format_html(
             '<a href="{}" class="link link-hover">{}</a>',
             reverse("product-detail", kwargs={"upc": record.product.upc}),
-            value,
+            record.display_name,
         )
 
     def render_quantity(self, value, record):

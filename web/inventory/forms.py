@@ -2,7 +2,7 @@
 
 from django import forms
 
-from .models import CSVUpload, InventoryItem, Location
+from .models import CSVUpload, InventoryItem, Location, UPCProduct
 
 
 class UploadForm(forms.ModelForm):
@@ -42,6 +42,38 @@ class InventoryItemForm(forms.ModelForm):
         ),
         required=False,
     )
+    photo = forms.ImageField(
+        required=False,
+        widget=forms.ClearableFileInput(
+            attrs={"class": "file-input file-input-bordered w-full"}
+        ),
+    )
+    custom_name = forms.CharField(
+        max_length=255,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "input input-bordered w-full",
+                "placeholder": "Leave blank to use catalogue name",
+            }
+        ),
+    )
+    custom_description = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "class": "textarea textarea-bordered w-full",
+                "rows": 4,
+                "placeholder": "Leave blank to use catalogue description",
+            }
+        ),
+        required=False,
+    )
+
+    product = forms.ModelChoiceField(
+        queryset=UPCProduct.objects.all(),
+        widget=forms.HiddenInput(),
+        required=True,
+    )
 
     class Meta:
         model = InventoryItem
@@ -53,9 +85,11 @@ class InventoryItemForm(forms.ModelForm):
             "purchase_date",
             "expiry_date",
             "notes",
+            "photo",
+            "custom_name",
+            "custom_description",
         ]
         widgets = {
-            "product": forms.Select(attrs={"class": "select select-bordered w-full"}),
             "quantity": forms.NumberInput(
                 attrs={"class": "input input-bordered w-full", "min": 1}
             ),

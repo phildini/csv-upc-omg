@@ -46,37 +46,65 @@
           {% endif %}
 
           <div class="mt-6">
-            <h2 class="text-lg font-semibold mb-2">Inventory Items</h2>
+            <h2 class="text-lg font-semibold mb-2">Your Inventory Items</h2>
             {% if user_items %}
-            <div class="overflow-x-auto">
-              <table class="table table-zebra w-full">
-                <thead>
-                  <tr>
-                    <th>Location</th>
-                    <th>Quantity</th>
-                    <th>Expiry Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for item in user_items %}
-                  <tr>
-                    <td>{{ item.location.name|default:"—" }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.expiry_date|date:"M d, Y"|default:"—" }}</td>
-                    <td>
-                      {% if item.is_expired %}
-                      <span class="badge badge-error badge-sm">expired</span>
-                      {% elif item.is_low_stock %}
-                      <span class="badge badge-warning badge-sm">low</span>
+            <div class="space-y-3">
+              {% for item in user_items %}
+              <div class="card bg-base-200 shadow-sm">
+                <div class="card-body p-4">
+                  <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="sm:w-24 flex-shrink-0">
+                      {% if item.photo %}
+                        <img src="{{ item.photo.url }}" alt="{{ item.display_name }}" class="w-24 h-24 object-cover rounded-lg">
+                      {% elif item.product.image_url %}
+                        <img src="{{ item.product.image_url }}" alt="{{ item.display_name }}" class="w-24 h-24 object-cover rounded-lg">
                       {% else %}
-                      <span class="badge badge-success badge-sm">OK</span>
+                        <div class="bg-base-300 border-2 border-dashed rounded-lg w-24 h-24 flex items-center justify-center">
+                          <span class="text-base-content/40 text-xs">No image</span>
+                        </div>
                       {% endif %}
-                    </td>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
+                    </div>
+                    <div class="flex-1">
+                      <h3 class="font-semibold text-base">
+                        {% if item.custom_name %}
+                          {{ item.custom_name }}
+                          <span class="badge badge-ghost badge-xs ml-1">custom</span>
+                        {% else %}
+                          {{ item.product.title }}
+                        {% endif %}
+                      </h3>
+                      {% if item.custom_description or item.product.description %}
+                      <p class="text-sm text-base-content/70 mt-1">
+                        {% if item.custom_description %}
+                          {{ item.custom_description|truncatewords:20 }}
+                          <span class="badge badge-ghost badge-xs ml-1">custom</span>
+                        {% else %}
+                          {{ item.product.description|truncatewords:20 }}
+                        {% endif %}
+                      </p>
+                      {% endif %}
+                      <div class="flex gap-4 mt-2 text-sm">
+                        <span><strong>Qty:</strong> {{ item.quantity }}</span>
+                        <span><strong>Location:</strong> {{ item.location.name|default:"—" }}</span>
+                        <span><strong>Expires:</strong> {{ item.expiry_date|date:"M d, Y"|default:"—" }}</span>
+                      </div>
+                      <div class="mt-2">
+                        {% if item.is_expired %}
+                        <span class="badge badge-error badge-sm">expired</span>
+                        {% elif item.is_low_stock %}
+                        <span class="badge badge-warning badge-sm">low stock</span>
+                        {% else %}
+                        <span class="badge badge-success badge-sm">OK</span>
+                        {% endif %}
+                      </div>
+                    </div>
+                    <div class="flex sm:flex-col gap-2">
+                      <a href="{% url 'inventory-item-edit' item.pk %}" class="btn btn-ghost btn-xs">Edit</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
             </div>
             {% else %}
             <p class="text-base-content/60">No inventory items found for this product.</p>

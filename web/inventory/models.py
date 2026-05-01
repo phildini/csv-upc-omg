@@ -180,6 +180,13 @@ class InventoryItem(models.Model):
     )
     quantity = models.PositiveIntegerField(default=1)
     low_stock_threshold = models.PositiveIntegerField(default=1)
+    photo = models.ImageField(upload_to="inventory-items/%Y/%m/", blank=True, null=True)
+    custom_name = models.CharField(
+        max_length=255, blank=True, default="", help_text="Override the product name"
+    )
+    custom_description = models.TextField(
+        blank=True, default="", help_text="Override the product description"
+    )
     notes = models.TextField(blank=True, default="")
     purchase_date = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
@@ -195,7 +202,67 @@ class InventoryItem(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.product.title} (x{self.quantity})"
+        return f"{self.display_name} (x{self.quantity})"
+
+    @property
+    def display_name(self):
+        if self.custom_name:
+            return self.custom_name
+        return self.product.title
+
+    @property
+    def display_image_url(self):
+        if self.photo:
+            return self.photo.url
+        if self.product.image_url:
+            return self.product.image_url
+        return None
+
+    @property
+    def display_description(self):
+        if self.custom_description:
+            return self.custom_description
+        return self.product.description
+
+    def save(self, *args, **kwargs):
+        old_photo_name = None
+        if self.pk:
+            old_instance = InventoryItem.objects.filter(pk=self.pk).first()
+            if old_instance:
+                old_photo_name = old_instance.photo.name if old_instance.photo else None
+
+        if self.photo and hasattr(self.photo, "seek"):
+            if not self.photo.name.endswith("_resized"):
+                from PIL import Image
+
+                img = Image.open(self.photo)
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
+                max_dim = 800
+                if img.width > max_dim or img.height > max_dim:
+                    img.thumbnail((max_dim, max_dim), Image.LANCZOS)
+                    import io
+                    from django.core.files.uploadedfile import InMemoryUploadedFile
+
+                    output = io.BytesIO()
+                    img.save(output, format="JPEG", quality=85)
+                    output.seek(0)
+                    name = self.photo.name
+                    if name.endswith("."):
+                        name = name[:-1]
+                    self.photo = InMemoryUploadedFile(
+                        output,
+                        "ImageField",
+                        name.rsplit(".", 1)[0] + ".jpg",
+                        "image/jpeg",
+                        output.getbuffer().nbytes,
+                        None,
+                    )
+
+        super().save(*args, **kwargs)
+
+        if old_photo_name and self.photo and old_photo_name != self.photo.name:
+            self.photo.storage.delete(old_photo_name)
 
     @property
     def is_low_stock(self):
