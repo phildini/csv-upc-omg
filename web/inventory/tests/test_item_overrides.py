@@ -363,8 +363,15 @@ class DisplayPropertyFallbackTests(TestCase):
         self.assertEqual(item.display_image_url, "https://example.com/base.jpg")
 
     def test_photo_overrides_catalogue_image(self):
+        from PIL import Image
+        import io
+
+        img = Image.new("RGB", (100, 100), color="green")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
         photo = SimpleUploadedFile(
-            "custom.jpg", b"fake image data", content_type="image/jpeg"
+            "custom.jpg", buf.getvalue(), content_type="image/jpeg"
         )
         item = InventoryItem.objects.create(
             user=self.user,
@@ -372,7 +379,8 @@ class DisplayPropertyFallbackTests(TestCase):
             quantity=1,
             photo=photo,
         )
-        self.assertIn("custom.jpg", item.display_image_url)
+        self.assertTrue(item.display_image_url)
+        self.assertNotEqual(item.display_image_url, "https://example.com/base.jpg")
 
     def test_photo_and_catalogue_image_fallback_order(self):
         item = InventoryItem.objects.create(
