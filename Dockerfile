@@ -15,11 +15,11 @@ COPY pyproject.toml uv.lock ./
 COPY src/pyproject.toml ./src/
 COPY web/pyproject.toml ./web/
 
-# Install dependencies (no dev)
-RUN uv sync --frozen --no-dev
-
-# Copy application code
+# Copy application code (needed for workspace package installation)
 COPY . .
+
+# Install dependencies (no dev) with all workspace packages
+RUN uv sync --frozen --no-dev --all-packages
 
 # Build Tailwind CSS
 RUN uv run python web/manage.py tailwind build
@@ -47,6 +47,12 @@ COPY --from=builder /app /app
 # Create data directory
 RUN mkdir -p /data && chown -R 1000:1000 /data
 
+# Create uv cache directory at default location with proper permissions
+RUN mkdir -p /.cache/uv && chown -R 1000:1000 /.cache
+
+# Create gunicorn control directory
+RUN mkdir -p /.gunicorn && chown -R 1000:1000 /.gunicorn
+
 USER 1000
 
 # Health check
@@ -55,4 +61,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "uv run python web/manage.py migrate --noinput && uv run gunicorn --bind 0.0.0.0:8080 --workers 2 config.wsgi"]
+CMD ["sh", "-c", "uv run python web/manage.py migrate --noinput && uv run gunicorn --bind 0.0.0.0:8080 --workers 1 --preload --max-requests 1000 --max-requests-jitter 100 config.wsgi"]
