@@ -475,21 +475,16 @@ class LocationCreateInlineView(LoginRequiredMixin, CreateView):
             location_options = Location.objects.filter(
                 user=self.request.user
             ).values_list("id", "name")
-            options_html = format_html(
-                '<option value="">No location</option>'
-            )
+            options_html = format_html('<option value="">No location</option>')
             for loc_id, loc_name in location_options:
-                selected = 'selected' if str(loc_id) == str(self.object.pk) else ''
+                selected = "selected" if str(loc_id) == str(self.object.pk) else ""
                 options_html += format_html(
-                    '<option value="{}" {}>{}</option>',
-                    loc_id, selected, loc_name
+                    '<option value="{}" {}>{}</option>', loc_id, selected, loc_name
                 )
             return HttpResponse(
                 options_html,
                 headers={
-                    "HX-Trigger": '{"location-created": "'
-                    + str(self.object.pk)
-                    + '"}',
+                    "HX-Trigger": '{"location-created": "' + str(self.object.pk) + '"}',
                 },
             )
         return response
@@ -520,22 +515,8 @@ class LocationCreateInlineView(LoginRequiredMixin, CreateView):
             return HttpResponse(html, status=400)
         return super().form_invalid(form)
 
-    def get(self, request, *args, **kwargs):
-        """Return the inline form HTML for HTMX swap."""
-        form = self.get_form_class()()
-        from django.http import HttpResponse
-        from django.template.loader import render_to_string
-
-        html = render_to_string(
-            "locations/inline_form.html",
-            {"form": form},
-            request=self.request,
-        )
-        return HttpResponse(html)
-
 
 # ── UPCProduct Catalogue Views ────────────────────────────────────────
-
 
 
 class ProductListView(LoginRequiredMixin, ListView):
