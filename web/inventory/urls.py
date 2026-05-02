@@ -40,8 +40,13 @@ urlpatterns = [
     path("locations/", views.LocationListView.as_view(), name="location-list"),
     path(
         "locations/create/",
-        views.LocationCreateView.as_view(),
+        views.LocationCreateInlineView.as_view(),
         name="location-create",
+    ),
+    path(
+        "locations/create/inline/",
+        views.LocationCreateInlineView.as_view(),
+        name="location-create-inline",
     ),
     path(
         "locations/<uuid:pk>/delete/",

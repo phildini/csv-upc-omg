@@ -117,14 +117,64 @@
       </div>
 
       <div class="form-control w-full mb-4">
-        <label class="label">
-          <span class="label-text font-medium">{{ form.location.label }}</span>
-        </label>
-        {{ form.location }}
+        <div class="flex items-start justify-between">
+          <label class="label flex-1 pb-0">
+            <span class="label-text font-medium">{{ form.location.label }}</span>
+          </label>
+          <button type="button"
+                  id="add-location-btn"
+                  class="link link-primary text-sm"
+                  hx-get="{% url 'location-create-inline' %}"
+                  hx-target="#location-inline-form"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="this.style.display='none'">
+            + Add
+          </button>
+        </div>
+        <div id="location-wrapper">
+          {{ form.location }}
+        </div>
+        <div id="location-inline-form"></div>
         {% if form.location.errors %}
         <div class="text-error text-sm mt-1">{{ form.location.errors.as_text }}</div>
         {% endif %}
       </div>
+
+      <script>
+      document.body.addEventListener('location-created', function(evt) {
+        var locationId = evt.detail.value;
+        fetch('/locations/create/inline/')
+          .then(r => r.text())
+          .then(html => {
+            var parser = new DOMParser();
+            var doc = parser.parseFromString(html, 'text/html');
+            var existingContent = doc.getElementById('location-form-content');
+            if (existingContent) {
+              document.getElementById('location-wrapper').innerHTML = '';
+
+              var select = document.getElementById('id_location');
+              select.innerHTML = existingContent.innerHTML;
+
+              for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === locationId) {
+                  select.options[i].selected = true;
+                  break;
+                }
+              }
+
+              var addBtn = document.getElementById('add-location-btn');
+              if (addBtn) addBtn.style.display = '';
+
+              document.getElementById('location-inline-form').innerHTML = '';
+            }
+          })
+          .catch(e => {
+            var addBtn = document.getElementById('add-location-btn');
+            if (addBtn) addBtn.style.display = '';
+            document.getElementById('location-inline-form').innerHTML = '';
+          });
+      });
+      </script>
 
       <div class="form-control w-full mb-4">
         <label class="label">

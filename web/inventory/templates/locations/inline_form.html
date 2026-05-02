@@ -1,0 +1,38 @@
+<form hx-post="{% url 'location-create-inline' %}"
+      hx-target="#location-form-container"
+      hx-swap="outerHTML"
+      hx-indicator="#location-form-indicator"
+      class="flex flex-col gap-2">
+
+  <div class="form-control">
+    <label class="label py-0">
+      <span class="label-text text-sm font-medium">New Location</span>
+    </label>
+    <input type="text" name="name" id="id_name"
+           class="input input-bordered input-sm w-full"
+           placeholder="e.g. Garage, Office Shelf"
+           maxlength="255" required>
+  </div>
+
+  <div class="form-control">
+    <label class="label py-0">
+      <span class="label-text text-sm font-medium">Description (optional)</span>
+    </label>
+    <textarea name="description" id="id_description" rows="2"
+              class="textarea textarea-bordered textarea-sm w-full"
+              placeholder="Brief description"></textarea>
+  </div>
+
+  <div class="flex gap-2 mt-1">
+    <button type="submit" class="btn btn-primary btn-sm">Create & Add</button>
+    <button type="button"
+            class="btn btn-ghost btn-sm"
+            onclick="document.getElementById('location-form-container').innerHTML = ''">
+      Cancel
+    </button>
+  </div>
+</form>
+
+<div id="location-form-indicator" class="htmx-indicator hidden">
+  <span class="loading loading-spinner loading-xs"></span>
+</div>

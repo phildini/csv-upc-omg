@@ -447,17 +447,6 @@ class LocationListView(LoginRequiredMixin, ListView):
         return context
 
 
-class LocationCreateView(LoginRequiredMixin, CreateView):
-    model = Location
-    form_class = LocationForm
-    template_name = "locations/form.html"
-    success_url = reverse_lazy("location-list")
-
-    def form_valid(self, form):
-        form.instance.user = self.request.user
-        return super().form_valid(form)
-
-
 class LocationDeleteView(LoginRequiredMixin, DeleteView):
     model = Location
     success_url = reverse_lazy("location-list")
@@ -470,7 +459,83 @@ class LocationDeleteView(LoginRequiredMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
+class LocationCreateInlineView(LoginRequiredMixin, CreateView):
+    model = Location
+    form_class = LocationForm
+    template_name = "locations/inline_form.html"
+    success_url = reverse_lazy("item-list")
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        response = super().form_valid(form)
+        if self.request.headers.get("HX-Request"):
+            from django.utils.html import format_html
+            from django.http import HttpResponse
+
+            location_options = Location.objects.filter(
+                user=self.request.user
+            ).values_list("id", "name")
+            options_html = format_html(
+                '<option value="">No location</option>'
+            )
+            for loc_id, loc_name in location_options:
+                selected = 'selected' if str(loc_id) == str(self.object.pk) else ''
+                options_html += format_html(
+                    '<option value="{}" {}>{}</option>',
+                    loc_id, selected, loc_name
+                )
+            return HttpResponse(
+                options_html,
+                headers={
+                    "HX-Trigger": '{"location-created": "'
+                    + str(self.object.pk)
+                    + '"}',
+                },
+            )
+        return response
+
+    def get(self, request, *args, **kwargs):
+        """Return the inline form HTML for HTMX swap."""
+        form = self.get_form_class()()
+        from django.http import HttpResponse
+        from django.template.loader import render_to_string
+
+        html = render_to_string(
+            "locations/inline_form.html",
+            {"form": form},
+            request=self.request,
+        )
+        return HttpResponse(html)
+
+    def form_invalid(self, form):
+        if self.request.headers.get("HX-Request"):
+            from django.http import HttpResponse
+            from django.template.loader import render_to_string
+
+            html = render_to_string(
+                "locations/inline_form.html",
+                {"form": form},
+                request=self.request,
+            )
+            return HttpResponse(html, status=400)
+        return super().form_invalid(form)
+
+    def get(self, request, *args, **kwargs):
+        """Return the inline form HTML for HTMX swap."""
+        form = self.get_form_class()()
+        from django.http import HttpResponse
+        from django.template.loader import render_to_string
+
+        html = render_to_string(
+            "locations/inline_form.html",
+            {"form": form},
+            request=self.request,
+        )
+        return HttpResponse(html)
+
+
 # ── UPCProduct Catalogue Views ────────────────────────────────────────
+
 
 
 class ProductListView(LoginRequiredMixin, ListView):
