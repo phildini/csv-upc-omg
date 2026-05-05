@@ -47,8 +47,12 @@ class UserIsolationTests(TestCase):
     """Views only return data belonging to the requesting user."""
 
     def setUp(self):
-        self.user_a = User.objects.create_user(username="alice", password="pass")
-        self.user_b = User.objects.create_user(username="bob", password="pass")
+        self.user_a = User.objects.create_user(
+            username="alice", email="alice@example.com", password="pass"
+        )
+        self.user_b = User.objects.create_user(
+            username="bob", email="bob@example.com", password="pass"
+        )
         self.upload_a = CSVUpload.objects.create(
             user=self.user_a, filename="alice.csv", status="completed"
         )
@@ -57,13 +61,13 @@ class UserIsolationTests(TestCase):
         )
 
     def test_upload_list_user_a_sees_only_own(self):
-        self.client.login(username="alice", password="pass")
+        self.client.force_login(User.objects.get(email="alice@example.com"))
         resp = self.client.get("/uploads/")
         qs = resp.context["table"].data.data
         self.assertQuerySetEqual(qs, [self.upload_a.pk], transform=lambda o: o.pk)
 
     def test_upload_list_user_b_sees_only_own(self):
-        self.client.login(username="bob", password="pass")
+        self.client.force_login(User.objects.get(email="bob@example.com"))
         resp = self.client.get("/uploads/")
         qs = resp.context["table"].data.data
         self.assertQuerySetEqual(qs, [self.upload_b.pk], transform=lambda o: o.pk)
@@ -76,8 +80,8 @@ class UserIsolationTests(TestCase):
             csv_upload=self.upload_b, upc="222", status="success"
         )
 
-        self.client.login(username="alice", password="pass")
-        resp = self.client.get("/")
+        self.client.force_login(User.objects.get(email="alice@example.com"))
+        resp = self.client.get("/dashboard/")
         self.assertEqual(resp.status_code, 200)
         stats = resp.context["stats"]
         self.assertEqual(stats["total_uploads"], 1)
@@ -91,7 +95,9 @@ class UploadServiceTests(TestCase):
     """Core service: CSV parsing, barcode lookup, export, stats."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="tester", password="pass")
+        self.user = User.objects.create_user(
+            username="tester", email="tester@example.com", password="pass"
+        )
         self.upload = CSVUpload.objects.create(
             user=self.user,
             filename="test.csv",
@@ -186,8 +192,10 @@ class ViewIntegrationTests(TestCase):
     """End-to-end: auth, form submission, detail/export."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="tester", password="pass")
-        self.client.login(username="tester", password="pass")
+        self.user = User.objects.create_user(
+            username="tester", email="tester@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="tester@example.com"))
         self.upload = CSVUpload.objects.create(
             user=self.user,
             filename="test.csv",
@@ -202,7 +210,9 @@ class ViewIntegrationTests(TestCase):
         )
 
     def test_upload_detail_user_scoped(self):
-        hacker = User.objects.create_user(username="hacker", password="x")
+        hacker = User.objects.create_user(
+            username="hacker", email="hacker@example.com", password="x"
+        )
         secret = CSVUpload.objects.create(
             user=hacker, filename="secret.csv", status="completed"
         )
@@ -236,7 +246,7 @@ class ViewIntegrationTests(TestCase):
 
     def test_auth_required_for_all_views(self):
         """All inventory views require authentication."""
-        for path in ["/", "/uploads/", "/uploads/create/", "/lookups/"]:
+        for path in ["/dashboard/", "/uploads/", "/uploads/create/", "/lookups/"]:
             self.client.logout()
             resp = self.client.get(path)
             self.assertEqual(
@@ -253,8 +263,10 @@ class ScanInventoryFlowTests(TestCase):
     """End-to-end: scanning a UPC creates inventory items."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="scanner", password="pass")
-        self.client.login(username="scanner", password="pass")
+        self.user = User.objects.create_user(
+            username="scanner", email="scanner@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="scanner@example.com"))
 
     def test_scan_successful_lookup_creates_scan_record(self):
         """POST to scan with a valid UPC creates a Scan record."""
@@ -369,7 +381,9 @@ class ScanInventoryFlowTests(TestCase):
         """POST with another user's location returns 400."""
         from inventory.models import Location, UPCProduct
 
-        hacker = User.objects.create_user(username="hacker", password="x")
+        hacker = User.objects.create_user(
+            username="hacker", email="hacker@example.com", password="x"
+        )
         location = Location.objects.create(user=hacker, name="Hacker's Shelf")
         product = UPCProduct.objects.create(
             upc="012345678905", title="Widget", source="upcitemdb"
@@ -452,8 +466,10 @@ class InventoryCRUDTests(TestCase):
     """Tests for inventory item list, create, edit, delete, use, restock."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="invuser", password="pass")
-        self.client.login(username="invuser", password="pass")
+        self.user = User.objects.create_user(
+            username="invuser", email="invuser@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="invuser@example.com"))
         self.product = UPCProduct.objects.create(
             upc="012345678905", title="Test Widget", source="upcitemdb"
         )
@@ -472,7 +488,9 @@ class InventoryCRUDTests(TestCase):
         self.assertContains(resp, "Test Widget")
 
     def test_item_list_user_isolation(self):
-        another = User.objects.create_user(username="other", password="pass")
+        another = User.objects.create_user(
+            username="other", email="other@example.com", password="pass"
+        )
         InventoryItem.objects.create(
             user=another,
             product=UPCProduct.objects.create(upc="999999999999", title="Other Item"),
@@ -523,7 +541,9 @@ class InventoryCRUDTests(TestCase):
         self.assertEqual(self.item.quantity, 10)
 
     def test_item_edit_other_user_404(self):
-        hacker = User.objects.create_user(username="hacker", password="x")
+        hacker = User.objects.create_user(
+            username="hacker", email="hacker@example.com", password="x"
+        )
         other_item = InventoryItem.objects.create(
             user=hacker,
             product=UPCProduct.objects.create(upc="888888888888", title="Hacker Item"),
@@ -578,8 +598,10 @@ class LocationCRUDTests(TestCase):
     """Tests for location list, create, delete."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="locuser", password="pass")
-        self.client.login(username="locuser", password="pass")
+        self.user = User.objects.create_user(
+            username="locuser", email="locuser@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="locuser@example.com"))
         self.location = Location.objects.create(
             user=self.user, name="Kitchen", description="Main pantry"
         )
@@ -613,8 +635,10 @@ class CatalogueTests(TestCase):
     """Tests for product catalogue list and detail."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="catuser", password="pass")
-        self.client.login(username="catuser", password="pass")
+        self.user = User.objects.create_user(
+            username="catuser", email="catuser@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="catuser@example.com"))
         self.product = UPCProduct.objects.create(
             upc="012345678905",
             title="Cola",
@@ -660,8 +684,10 @@ class DashboardTests(TestCase):
     """Tests for dashboard with inventory stats."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="dashuser", password="pass")
-        self.client.login(username="dashuser", password="pass")
+        self.user = User.objects.create_user(
+            username="dashuser", email="dashuser@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="dashuser@example.com"))
         self.product = UPCProduct.objects.create(
             upc="012345678905", title="Widget", source="upcitemdb"
         )
@@ -671,7 +697,7 @@ class DashboardTests(TestCase):
         InventoryItem.objects.create(
             user=self.user, product=self.product, quantity=5, location=self.location
         )
-        resp = self.client.get("/")
+        resp = self.client.get("/dashboard/")
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "5")  # total_items stat
 
@@ -682,7 +708,7 @@ class DashboardTests(TestCase):
             quantity=1,
             low_stock_threshold=5,
         )
-        resp = self.client.get("/")
+        resp = self.client.get("/dashboard/")
         self.assertContains(resp, "low stock")
 
     def test_dashboard_shows_expired_alert(self):
@@ -695,11 +721,11 @@ class DashboardTests(TestCase):
             quantity=1,
             expiry_date=yesterday,
         )
-        resp = self.client.get("/")
+        resp = self.client.get("/dashboard/")
         self.assertContains(resp, "expired")
 
     def test_dashboard_empty_state(self):
-        resp = self.client.get("/")
+        resp = self.client.get("/dashboard/")
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "0")  # total_items
 
@@ -711,8 +737,10 @@ class ItemOverrideTests(TestCase):
     """Tests for per-item override fields and display properties."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="overuser", password="pass")
-        self.client.login(username="overuser", password="pass")
+        self.user = User.objects.create_user(
+            username="overuser", email="overuser@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="overuser@example.com"))
         self.catalogue_product = UPCProduct.objects.create(
             upc="012345678905",
             title="Catalogue Widget",
@@ -956,8 +984,10 @@ class CatalogueDetailShowsOverrides(TestCase):
     """Catalogue detail page shows per-item override content."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="ovrduser", password="pass")
-        self.client.login(username="ovrduser", password="pass")
+        self.user = User.objects.create_user(
+            username="ovrduser", email="ovrduser@example.com", password="pass"
+        )
+        self.client.force_login(User.objects.get(email="ovrduser@example.com"))
         self.product = UPCProduct.objects.create(
             upc="012345678905",
             title="Original Product",
@@ -992,7 +1022,9 @@ class ItemOverrideAdminTests(TestCase):
         self.admin = User.objects.create_superuser(
             username="admin", email="admin@example.com", password="adminpass"
         )
-        self.user = User.objects.create_user(username="admintest", password="pass")
+        self.user = User.objects.create_user(
+            username="admintest", email="admintest@example.com", password="pass"
+        )
         self.product = UPCProduct.objects.create(
             upc="012345678905",
             title="Admin Test Product",
@@ -1005,7 +1037,7 @@ class ItemOverrideAdminTests(TestCase):
             custom_name="Admin Override Name",
             custom_description="Admin Override Description",
         )
-        self.client.login(username="admin", password="adminpass")
+        self.client.force_login(User.objects.get(email="admin@example.com"))
 
     def test_admin_list_displays_overrides(self):
         resp = self.client.get("/admin/inventory/inventoryitem/")

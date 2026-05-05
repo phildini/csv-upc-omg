@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}omgUPC — Track Your Inventory{% endblock %}
+{% block content %}
+<div class="flex flex-col items-center justify-center">
+  <!-- Hero Section -->
+  <section class="text-center py-20 px-4">
+    <h1 class="text-5xl font-bold mb-4">Track What You Have,<br>Wherever You Are</h1>
+    <p class="text-xl text-base-content/70 mb-8 max-w-2xl">
+      Scan barcodes, manage inventory, and track items across locations.
+      Simple, fast, and free.
+    </p>
+    <a href="{% url 'stagedoor:login' %}" class="btn btn-primary btn-lg">
+      Get Started — Login with Email
+    </a>
+  </section>
+
+  <!-- Features Section -->
+  <section class="grid grid-cols-1 md:grid-cols-3 gap-8 py-16 px-4 max-w-5xl">
+    {% for title, desc, icon in features %}
+    <div class="card bg-base-100 shadow-sm text-center p-6">
+      <h3 class="text-xl font-semibold mb-2">{{ title }}</h3>
+      <p class="text-base-content/70">{{ desc }}</p>
+    </div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

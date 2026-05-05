@@ -11,7 +11,9 @@ from inventory.models import InventoryItem, Location, UPCProduct
 
 class LocationTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="pass")
+        self.user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
 
     def test_create_location(self):
         location = Location.objects.create(user=self.user, name="Kitchen Pantry")
@@ -26,7 +28,9 @@ class LocationTests(TestCase):
             Location.objects.create(user=self.user, name="Garage")
 
     def test_different_users_same_name(self):
-        user2 = User.objects.create_user(username="user2", password="pass")
+        user2 = User.objects.create_user(
+            username="user2", email="user2@example.com", password="pass"
+        )
         Location.objects.create(user=self.user, name="Basement")
         Location.objects.create(user=user2, name="Basement")
         self.assertEqual(Location.objects.filter(name="Basement").count(), 2)
@@ -88,7 +92,9 @@ class UPCProductTests(TestCase):
 
 class InventoryItemTests(TestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username="testuser", password="pass")
+        self.user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
         self.product = UPCProduct.objects.create(
             upc="012345678905", title="Canned Beans"
         )
@@ -160,13 +166,17 @@ class InventoryItemTests(TestCase):
 
 class ModelRelationshipTests(TestCase):
     def test_user_locations_count(self):
-        user = User.objects.create_user(username="testuser", password="pass")
+        user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
         Location.objects.create(user=user, name="Kitchen")
         Location.objects.create(user=user, name="Garage")
         self.assertEqual(user.locations.count(), 2)
 
     def test_user_inventory_items_count(self):
-        user = User.objects.create_user(username="testuser", password="pass")
+        user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
         product = UPCProduct.objects.create(upc="012345678905", title="Widget")
         InventoryItem.objects.create(user=user, product=product, quantity=2)
         InventoryItem.objects.create(user=user, product=product, quantity=5)
@@ -174,14 +184,20 @@ class ModelRelationshipTests(TestCase):
 
     def test_product_inventory_items_count(self):
         product = UPCProduct.objects.create(upc="012345678905", title="Widget")
-        user1 = User.objects.create_user(username="user1", password="pass")
-        user2 = User.objects.create_user(username="user2", password="pass")
+        user1 = User.objects.create_user(
+            username="user1", email="user1@example.com", password="pass"
+        )
+        user2 = User.objects.create_user(
+            username="user2", email="user2@example.com", password="pass"
+        )
         InventoryItem.objects.create(user=user1, product=product, quantity=1)
         InventoryItem.objects.create(user=user2, product=product, quantity=3)
         self.assertEqual(product.inventory_items.count(), 2)
 
     def test_location_inventory_items_count(self):
-        user = User.objects.create_user(username="testuser", password="pass")
+        user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
         location = Location.objects.create(user=user, name="Shelf A")
         product = UPCProduct.objects.create(upc="012345678905", title="Widget")
         InventoryItem.objects.create(user=user, product=product, location=location)
@@ -191,13 +207,17 @@ class ModelRelationshipTests(TestCase):
 
 class ModelValidationTests(TestCase):
     def test_negative_quantity_raises(self):
-        user = User.objects.create_user(username="testuser", password="pass")
+        user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
         product = UPCProduct.objects.create(upc="012345678905", title="Widget")
         with self.assertRaises(Exception):
             InventoryItem.objects.create(user=user, product=product, quantity=-1)
 
     def test_negative_threshold_raises(self):
-        user = User.objects.create_user(username="testuser", password="pass")
+        user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
         product = UPCProduct.objects.create(upc="012345678905", title="Widget")
         with self.assertRaises(Exception):
             InventoryItem.objects.create(
@@ -205,7 +225,9 @@ class ModelValidationTests(TestCase):
             )
 
     def test_empty_location_name(self):
-        user = User.objects.create_user(username="testuser", password="pass")
+        user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="pass"
+        )
         with self.assertRaises(Exception):
             location = Location(user=user, name="")
             location.full_clean()

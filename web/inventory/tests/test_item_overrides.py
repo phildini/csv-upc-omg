@@ -16,9 +16,11 @@ class CatalogueImmutabilityTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="catalogue_user", password="testpass"
+            username="catalogue_user",
+            email="catalogue_user@example.com",
+            password="testpass",
         )
-        self.client.login(username="catalogue_user", password="testpass")
+        self.client.force_login(self.user)
         self.product = UPCProduct.objects.create(
             upc="012345678905",
             title="Immutable Catalogue Product",
@@ -74,8 +76,10 @@ class HTMXFormRegressionTests(TestCase):
     """Ensure HTMX form submissions work correctly with multipart file uploads."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="htmx_user", password="testpass")
-        self.client.login(username="htmx_user", password="testpass")
+        self.user = User.objects.create_user(
+            username="htmx_user", email="htmx_user@example.com", password="testpass"
+        )
+        self.client.force_login(self.user)
         self.product = UPCProduct.objects.create(
             upc="999999999999",
             title="HTMX Test Product",
@@ -243,8 +247,10 @@ class ScanFlowRegressionTests(TestCase):
     """Ensure scan-to-create flow still works with new fields."""
 
     def setUp(self):
-        self.user = User.objects.create_user(username="scan_user", password="testpass")
-        self.client.login(username="scan_user", password="testpass")
+        self.user = User.objects.create_user(
+            username="scan_user", email="scan_user@example.com", password="testpass"
+        )
+        self.client.force_login(self.user)
 
     @patch("inventory.services.fetch_product_details_sync")
     def test_scan_then_create_item_with_overrides(self, mock_api):
@@ -291,7 +297,9 @@ class ScanFlowRegressionTests(TestCase):
         """Scan create-item rejects another user's location."""
         from inventory.models import InventoryItem, Location, UPCProduct
 
-        hacker = User.objects.create_user(username="hacker2", password="x")
+        hacker = User.objects.create_user(
+            username="hacker2", email="hacker2@example.com", password="x"
+        )
         hacker_location = Location.objects.create(user=hacker, name="Hacker Shelf")
         product = UPCProduct.objects.create(
             upc="012345678905", title="Widget", source="upcitemdb"
@@ -317,9 +325,11 @@ class DisplayPropertyFallbackTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="display_user", password="testpass"
+            username="display_user",
+            email="display_user@example.com",
+            password="testpass",
         )
-        self.client.login(username="display_user", password="testpass")
+        self.client.force_login(self.user)
         self.product = UPCProduct.objects.create(
             upc="0123456789",
             title="Base Product",

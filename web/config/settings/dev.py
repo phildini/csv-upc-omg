@@ -14,3 +14,6 @@ CSRF_TRUSTED_ORIGINS = [
 INSTALLED_APPS += ["debug_toolbar"]  # noqa: F405
 MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
 INTERNAL_IPS = ["127.0.0.1"]
+
+# Email backend for development - prints tokens to console
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

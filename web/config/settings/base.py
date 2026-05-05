@@ -31,11 +31,14 @@ INSTALLED_APPS = [
     "django_tasks",
     "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+    "django.contrib.sites",  # Required by stagedoor
     "rest_framework",
     "django_tables2",
     "django_filters",
     "django_htmx",
     "django_tailwind_cli",
+    "phonenumber_field",  # Required by stagedoor
+    "stagedoor",  # Email-based auth
     "inventory",
 ]
 
@@ -80,22 +83,21 @@ DATABASES = {
     ),
 }
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": (
-            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
-        ),
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": ("django.contrib.auth.password_validation.CommonPasswordValidator"),
-    },
-    {
-        "NAME": ("django.contrib.auth.password_validation.NumericPasswordValidator"),
-    },
+AUTHENTICATION_BACKENDS = [
+    "stagedoor.backends.EmailTokenBackend",
+    "django.contrib.auth.backends.ModelBackend",
 ]
+
+SITE_ID = 1
+
+# Stagedoor settings
+STAGEDOOR_DEFAULT_FROM_EMAIL = "noreply@omgupc.com"
+STAGEDOOR_SITE_NAME = "omgUPC"
+STAGEDOOR_ENABLE_EMAIL_OVERRIDE = True
+
+LOGIN_URL = "/auth/login/"
+LOGIN_REDIRECT_URL = "/dashboard/"
+LOGOUT_REDIRECT_URL = "/"
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -120,9 +122,6 @@ TASKS = {
         "BACKEND": "django_tasks.backends.immediate.ImmediateBackend",
     },
 }
-
-LOGIN_URL = "/admin/login/"
-LOGIN_REDIRECT_URL = "/"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

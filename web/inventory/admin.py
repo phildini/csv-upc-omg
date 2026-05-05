@@ -17,7 +17,7 @@ class CSVUploadAdmin(admin.ModelAdmin):
         "created_at",
     ]
     list_filter = ["status", "created_at"]
-    search_fields = ["filename", "user__username"]
+    search_fields = ["filename", "user__email"]
     readonly_fields = ["created_at", "updated_at"]
 
     @admin.action(description="Re-process failed uploads")
@@ -44,7 +44,7 @@ class LookupRecordAdmin(admin.ModelAdmin):
 class ScanAdmin(admin.ModelAdmin):
     list_display = ["upc", "user", "status", "product_title", "created_at"]
     list_filter = ["status", "created_at"]
-    search_fields = ["upc", "product_title", "user__username"]
+    search_fields = ["upc", "product_title", "user__email"]
     readonly_fields = ["created_at"]
 
 
@@ -52,7 +52,7 @@ class ScanAdmin(admin.ModelAdmin):
 class LocationAdmin(admin.ModelAdmin):
     list_display = ["name", "user", "created_at", "updated_at"]
     list_filter = ["created_at"]
-    search_fields = ["name", "user__username"]
+    search_fields = ["name", "user__email"]
     readonly_fields = ["created_at", "updated_at"]
 
 
@@ -78,7 +78,7 @@ class InventoryItemAdmin(admin.ModelAdmin):
     search_fields = [
         "product__title",
         "product__upc",
-        "user__username",
+        "user__email",
         "custom_name",
     ]
     readonly_fields = ["created_at", "updated_at", "display_image_preview"]
@@ -131,3 +131,14 @@ class InventoryItemAdmin(admin.ModelAdmin):
                 obj.photo.url,
             )
         return "No custom photo uploaded"
+
+    @admin.action(description="Re-process failed uploads")
+    def reprocess_failed(self, request, queryset):
+        for upload in queryset.filter(status="failed"):
+            upload.status = "pending"
+            upload.error_message = ""
+            upload.save()
+            process_csv_task.enqueue(upload_id=str(upload.id))
+            lookup_batch_task.enqueue(upload_id=str(upload.id))
+
+    actions = ["reprocess_failed"]

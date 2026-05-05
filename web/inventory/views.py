@@ -26,6 +26,26 @@ from .tables import InventoryTable, LookupTable, UploadTable
 from .tasks import lookup_batch_task, process_csv_task
 
 
+def landing(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    return render(
+        request,
+        "inventory/landing.html",
+        {
+            "features": [
+                ("Scan Barcodes", "Quick UPC scanning with your device camera", "..."),
+                (
+                    "Track Inventory",
+                    "Organize and manage your items with locations",
+                    "...",
+                ),
+                ("Get Insights", "Monitor stock levels and expiry dates", "..."),
+            ]
+        },
+    )
+
+
 @login_required
 def dashboard(request):
     stats = UploadService.get_dashboard_stats(request.user)

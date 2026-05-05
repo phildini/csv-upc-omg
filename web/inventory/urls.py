@@ -5,7 +5,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path("", views.dashboard, name="dashboard"),
+    path("", views.landing, name="landing"),
+    path("dashboard/", views.dashboard, name="dashboard"),
     # Uploads
     path("uploads/", views.UploadListView.as_view(), name="upload-list"),
     path("uploads/create/", views.UploadCreateView.as_view(), name="upload-create"),

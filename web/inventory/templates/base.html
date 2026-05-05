@@ -21,16 +21,20 @@
             </svg>
           </div>
           <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow hidden" id="mobile-menu">
+            {% if user.is_authenticated %}
             <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
             <li><a href="{% url 'item-list' %}">Inventory</a></li>
             <li><a href="{% url 'scan' %}">Scan</a></li>
             <li><a href="{% url 'product-list' %}">Catalogue</a></li>
             <li><a href="{% url 'location-list' %}">Locations</a></li>
             <li><a href="{% url 'upload-list' %}">Uploads</a></li>
+            {% else %}
+            <li><a href="{% url 'stagedoor:login' %}">Login</a></li>
+            {% endif %}
           </ul>
         </div>
 
-        <a href="{% url 'dashboard' %}" class="btn btn-ghost normal-case text-xl gap-1">
+        <a href="{% url 'landing' %}" class="btn btn-ghost normal-case text-xl gap-1">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
           </svg>
@@ -39,6 +43,7 @@
       </div>
 
       <div class="navbar-center hidden lg:flex">
+        {% if user.is_authenticated %}
         <ul class="menu menu-horizontal px-1 gap-1">
           {% with url_name=request.resolver_match.url_name|default:'' %}
           <li><a href="{% url 'dashboard' %}" class="{% if url_name == 'dashboard' %}active{% endif %}">Dashboard</a></li>
@@ -51,6 +56,7 @@
           <li><a href="{% url 'upload-list' %}" class="{% if 'upload' in url_name %}active{% endif %}">Uploads</a></li>
           {% endwith %}
         </ul>
+        {% endif %}
       </div>
 
       <div class="flex-none hidden lg:flex">
@@ -58,17 +64,17 @@
         <div class="dropdown dropdown-end">
           <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
             <div class="w-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm">
-              {{ user.username|slice:":1"|upper }}
+              {{ user.email|slice:":1"|upper|default:"U" }}
             </div>
           </div>
           <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow">
-            <li class="menu-title"><span class="text-sm font-semibold truncate px-2">{{ user.username }}</span></li>
+            <li class="menu-title"><span class="text-sm font-semibold truncate px-2">{{ user.email }}</span></li>
             <li><a href="{% url 'admin:index' %}">Admin Panel</a></li>
             <li><a href="{% url 'admin:logout' %}">Logout</a></li>
           </ul>
         </div>
         {% else %}
-        <a href="{% url 'admin:login' %}" class="btn btn-primary btn-sm">Login</a>
+        <a href="{% url 'stagedoor:login' %}" class="btn btn-primary btn-sm">Login with Email</a>
         {% endif %}
       </div>
     </div>
