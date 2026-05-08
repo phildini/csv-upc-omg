@@ -62,9 +62,9 @@ RUN mkdir -p /.gunicorn && chown -R 1000:1000 /.gunicorn
 USER 1000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8080/health/ || exit 1
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "uv run python web/manage.py migrate --noinput && uv run gunicorn --bind 0.0.0.0:8080 --workers 1 --preload --max-requests 1000 --max-requests-jitter 100 config.wsgi"]
+CMD ["sh", "-c", "uv run python web/manage.py migrate --noinput && uv run gunicorn --bind 0.0.0.0:8080 --workers 1 --max-requests 1000 --max-requests-jitter 100 config.wsgi"]
