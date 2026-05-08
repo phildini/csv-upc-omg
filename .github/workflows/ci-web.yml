@@ -15,6 +15,7 @@ on:
       - "src/**"
       - "pyproject.toml"
       - ".github/workflows/ci-web.yml"
+  workflow_dispatch:
 
 jobs:
   test:
