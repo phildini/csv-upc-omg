@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Login - omgUPC{% endblock %}
+{% block content %}
+<div class="flex items-center justify-center py-10">
+    <div class="card w-full max-w-sm bg-base-100 shadow-xl">
+        <form action="{% url 'stagedoor:login' %}" method="post">
+            {% csrf_token %}
+            <div class="card-body space-y-4">
+                <h2 class="card-title justify-center text-lg">Login with Email</h2>
+
+                {% for message in messages %}
+                <div role="alert" class="alert alert-{{ message.tags|default:'info' }} py-2 text-sm">
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+
+                {{ form.non_field_errors }}
+
+                <div class="form-control">
+                    <label class="label" for="{{ form.email.id_for_label }}">
+                        <span class="label-text">Email address</span>
+                    </label>
+                    <input type="email" name="email" id="{{ form.email.id_for_label }}"
+                           class="input input-bordered w-full" value="{{ form.email.value|default:'' }}">
+                </div>
+
+                {% if request.GET.next %}
+                <input type="hidden" name="next" value="{{ request.GET.next }}">
+                {% endif %}
+
+                <div class="form-control mt-2">
+                    <button type="submit" class="btn btn-primary">Send Magic Link</button>
+                </div>
+
+                <div class="text-center">
+                    <a href="{% url 'stagedoor:token-post' %}" class="link link-primary link-hover text-sm">
+                        Already have a token? Enter it here
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

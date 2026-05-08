@@ -29,7 +29,7 @@
             <li><a href="{% url 'location-list' %}">Locations</a></li>
             <li><a href="{% url 'upload-list' %}">Uploads</a></li>
             {% else %}
-            <li><a href="{% url 'stagedoor:login' %}">Login</a></li>
+            <li><a href="{% url 'login' %}">Login</a></li>
             {% endif %}
           </ul>
         </div>
@@ -70,11 +70,11 @@
           <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-48 shadow">
             <li class="menu-title"><span class="text-sm font-semibold truncate px-2">{{ user.email }}</span></li>
             <li><a href="{% url 'admin:index' %}">Admin Panel</a></li>
-            <li><a href="{% url 'admin:logout' %}">Logout</a></li>
+            <li><a href="{% url 'stagedoor:logout' %}">Logout</a></li>
           </ul>
         </div>
         {% else %}
-        <a href="{% url 'stagedoor:login' %}" class="btn btn-primary btn-sm">Login with Email</a>
+        <a href="{% url 'login' %}" class="btn btn-primary btn-sm">Login with Email</a>
         {% endif %}
       </div>
     </div>

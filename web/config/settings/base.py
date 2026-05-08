@@ -16,11 +16,11 @@ BASE_DIR = WEB_DIR.parent
 
 environ.Env.read_env(BASE_DIR / ".env")
 
-SECRET_KEY = env("SECRET_KEY", default=get_random_secret_key())
+SECRET_KEY = env("DJANGO_SECRET_KEY", default=get_random_secret_key())  # pyright: ignore[reportArgumentType]
 
 DEBUG = False
 
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])  # pyright: ignore[reportArgumentType]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django_filters",
     "django_htmx",
     "django_tailwind_cli",
+    "anymail",
     "phonenumber_field",  # Required by stagedoor
     "stagedoor",  # Email-based auth
     "inventory",
@@ -79,7 +80,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": env.db(
         "DATABASE_URL",
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",  # pyright: ignore[reportArgumentType]
     ),
 }
 
@@ -89,6 +90,17 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 SITE_ID = 1
+
+# Email configuration
+EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
+ANYMAIL = {
+    "POSTMARK_SERVER_TOKEN": env.str("POSTMARK_SERVER_TOKEN", ""),
+}
+EMAIL_USE_TLS = True
+
+# Default email settings
+DEFAULT_FROM_EMAIL = "omgUPC <noreply@omgupc.com>"
+SERVER_EMAIL = "omgUPC <server@omgupc.com>"
 
 # Stagedoor settings
 STAGEDOOR_DEFAULT_FROM_EMAIL = "noreply@omgupc.com"

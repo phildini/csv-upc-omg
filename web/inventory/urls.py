@@ -6,6 +6,7 @@ from . import views
 
 urlpatterns = [
     path("", views.landing, name="landing"),
+    path("login/", views.login_page, name="login"),
     path("dashboard/", views.dashboard, name="dashboard"),
     # Uploads
     path("uploads/", views.UploadListView.as_view(), name="upload-list"),

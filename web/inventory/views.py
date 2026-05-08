@@ -16,6 +16,7 @@ from django.views.generic import (
     UpdateView,
 )
 from django_tables2 import SingleTableView
+from stagedoor.views import LoginForm
 
 from csv_upc_omg.barcode_lookup import BarcodeAPIError
 
@@ -44,6 +45,14 @@ def landing(request):
             ]
         },
     )
+
+
+def login_page(request):
+    """GET login form that POSTs to stagedoor to send magic link."""
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    form = LoginForm()
+    return render(request, "inventory/login.html", {"form": form})
 
 
 @login_required

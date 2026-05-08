@@ -449,6 +449,7 @@ source = { editable = "web" }
 dependencies = [
     { name = "csv-upc-omg" },
     { name = "django" },
+    { name = "django-anymail" },
     { name = "django-debug-toolbar" },
     { name = "django-environ" },
     { name = "django-filter" },
@@ -469,6 +470,7 @@ dependencies = [
 requires-dist = [
     { name = "csv-upc-omg", editable = "src" },
     { name = "django", specifier = ">=5.2,<6.0" },
+    { name = "django-anymail", specifier = ">=15.0" },
     { name = "django-debug-toolbar", specifier = ">=4.0" },
     { name = "django-environ", specifier = ">=0.11" },
     { name = "django-filter", specifier = ">=23" },
@@ -524,6 +526,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/1f/c5/c69e338eb2959f641045802e5ea87ca4bf5ac90c5fd08953ca10742fad51/django-5.2.13.tar.gz", hash = "sha256:a31589db5188d074c63f0945c3888fad104627dfcc236fb2b97f71f89da33bc4", size = 10890368, upload-time = "2026-04-07T14:02:15.072Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/59/b1/51ab36b2eefcf8cdb9338c7188668a157e29e30306bfc98a379704c9e10d/django-5.2.13-py3-none-any.whl", hash = "sha256:5788fce61da23788a8ce6f02583765ab060d396720924789f97fa42119d37f7a", size = 8310982, upload-time = "2026-04-07T14:02:08.883Z" },
+]
+
+[[package]]
+name = "django-anymail"
+version = "15.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "idna" },
+    { name = "requests" },
+    { name = "urllib3" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/00/43/f0aadb31f2c58afcd9f001f4291998cbd6d289898167e79d908506fc6faf/django_anymail-15.0.tar.gz", hash = "sha256:23d8ab6589afe8cc1ae7665c26879814ad192f4c3ed837a2a1868b0a056869e0", size = 106985, upload-time = "2026-04-18T20:44:19.237Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/75/d1/daae99ec3b30886010a499975880ec20c32c622bee6b92c226b715e42f0c/django_anymail-15.0-py3-none-any.whl", hash = "sha256:64d33dd1084bfc8e4e12245f56629be40aa0b0498fc7fc7544d87b9b2048be1e", size = 147229, upload-time = "2026-04-18T20:44:17.323Z" },
 ]
 
 [[package]]

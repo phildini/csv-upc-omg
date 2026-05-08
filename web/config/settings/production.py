@@ -20,7 +20,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
 # Override MEDIA_ROOT for Fly volume
-MEDIA_ROOT = env("MEDIA_ROOT", default="/data/media")
+MEDIA_ROOT = env("MEDIA_ROOT", default="/data/media")  # pyright: ignore[reportArgumentType]
 
 # Configure CSRF for custom domain and Fly.io
 CSRF_TRUSTED_ORIGINS = [
