@@ -3,6 +3,12 @@ FROM python:3.11-slim-bullseye AS builder
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libfreetype6-dev \
+    liblcms2-dev \
+    libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
