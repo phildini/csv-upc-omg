@@ -278,7 +278,7 @@ class ItemListView(LoginRequiredMixin, SingleTableView):
     model = InventoryItem
     template_name = "inventory/list.html"
     table_class = InventoryTable
-    table_pagination = {"per_page": 20}
+    table_pagination = {"per_page": 50}
 
     def get_queryset(self):
         qs = InventoryItem.objects.filter(user=self.request.user).select_related(
