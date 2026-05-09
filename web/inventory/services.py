@@ -205,7 +205,7 @@ class UploadService:
         total_count = total_lookups.count()
 
         items = InventoryItem.objects.filter(user=user)
-        total_items = sum(i.quantity for i in items)
+        total_items = items.count()
         low_stock = items.filter(quantity__lte=models.F("low_stock_threshold")).count()
         today = timezone.now().date()
         soon = today + datetime.timedelta(days=7)
