@@ -61,6 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: deploy-group
     environment: production
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -71,10 +72,32 @@ jobs:
           version: "latest"
 
       - name: Deploy to Fly.io
+        id: deploy
         run: |
-          echo "Deploying to Fly.io..."
-          flyctl version
-          flyctl auth whoami --verbose
-          flyctl deploy --app csv-upc-omg --config fly.toml --image-label latest
+          flyctl deploy \
+            --app csv-upc-omg \
+            --config fly.toml \
+            --image-label "${{ github.sha }}" \
+            --strategy rolling \
+            --verbose \
+            --timeout 10m \
+            2>&1 | tee deploy.log
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Verify deployment
+        run: |
+          echo "Verifying deployment..."
+          flyctl status --app csv-upc-omg
+          echo "Active machines:"
+          flyctl machines list --app csv-upc-omg
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment issue detected, attempting rollback..."
+          flyctl rollback --app csv-upc-omg 2>&1 || echo "Rollback not available — manual intervention may be needed"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
