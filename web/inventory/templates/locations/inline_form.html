@@ -1,5 +1,5 @@
 <form hx-post="{% url 'location-create-inline' %}"
-      hx-target="#location-form-container"
+      hx-target="#location-wrapper"
       hx-swap="outerHTML"
       hx-indicator="#location-form-indicator"
       class="flex flex-col gap-2">
@@ -27,7 +27,7 @@
     <button type="submit" class="btn btn-primary btn-sm">Create & Add</button>
     <button type="button"
             class="btn btn-ghost btn-sm"
-            onclick="document.getElementById('location-form-container').innerHTML = ''">
+            onclick="document.getElementById('location-inline-form').innerHTML = ''; document.getElementById('add-location-btn').style.display = ''">
       Cancel
     </button>
   </div>

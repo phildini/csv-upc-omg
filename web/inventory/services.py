@@ -208,7 +208,7 @@ class UploadService:
         total_items = items.count()
         low_stock = items.filter(quantity__lte=models.F("low_stock_threshold")).count()
         today = timezone.now().date()
-        soon = today + datetime.timedelta(days=7)
+        soon = today + datetime.timedelta(days=30)
         expiring_soon = items.filter(expiry_date__range=[today, soon]).count()
         expired = items.filter(expiry_date__lt=today).count()
 

@@ -35,13 +35,12 @@ def landing(request):
         "inventory/landing.html",
         {
             "features": [
-                ("Scan Barcodes", "Quick UPC scanning with your device camera", "..."),
+                ("Scan Barcodes", "Quick UPC scanning with your device camera"),
                 (
                     "Track Inventory",
                     "Organize and manage your items with locations",
-                    "...",
                 ),
-                ("Get Insights", "Monitor stock levels and expiry dates", "..."),
+                ("Get Insights", "Monitor stock levels and expiry dates"),
             ]
         },
     )
@@ -355,6 +354,17 @@ class ItemCreateView(LoginRequiredMixin, InventoryItemFormMixin, CreateView):
     template_name = "inventory/form.html"
     success_url = reverse_lazy("item-list")
 
+    def get_initial(self):
+        initial = super().get_initial()
+        upc = self.request.GET.get("product")
+        if upc:
+            try:
+                product = UPCProduct.objects.get(upc=upc)
+                initial["product"] = product.pk
+            except UPCProduct.DoesNotExist:
+                pass
+        return initial
+
     def form_valid(self, form):
         form.instance.user = self.request.user
         return super().form_valid(form)
@@ -498,20 +508,22 @@ class LocationCreateInlineView(LoginRequiredMixin, CreateView):
         form.instance.user = self.request.user
         response = super().form_valid(form)
         if self.request.headers.get("HX-Request"):
-            from django.utils.html import format_html
             from django.http import HttpResponse
+            from django.utils.safestring import mark_safe
 
-            location_options = Location.objects.filter(
-                user=self.request.user
-            ).values_list("id", "name")
-            options_html = format_html('<option value="">No location</option>')
-            for loc_id, loc_name in location_options:
-                selected = "selected" if str(loc_id) == str(self.object.pk) else ""
-                options_html += format_html(
-                    '<option value="{}" {}>{}</option>', loc_id, selected, loc_name
-                )
+            locations = Location.objects.filter(user=self.request.user).values_list(
+                "id", "name"
+            )
+            parts = [
+                '<select name="location" class="select select-bordered w-full" id="id_location">'
+            ]
+            parts.append('<option value="">No location</option>')
+            for loc_id, loc_name in locations:
+                selected = " selected" if str(loc_id) == str(self.object.pk) else ""
+                parts.append(f'<option value="{loc_id}"{selected}>{loc_name}</option>')
+            parts.append("</select>")
             return HttpResponse(
-                options_html,
+                mark_safe("".join(parts)),
                 headers={
                     "HX-Trigger": '{"location-created": "' + str(self.object.pk) + '"}',
                 },

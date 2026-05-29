@@ -3,10 +3,17 @@
     {% for scan in scans|slice:":5" %}
     <div class="card bg-base-200 border border-base-300 shadow-sm">
       <div class="card-body py-2 px-3">
-        <div class="font-mono text-xs">{{ scan.upc }}</div>
-        {% if scan.product_title %}
-        <div class="text-sm truncate">{{ scan.product_title }}</div>
-        {% endif %}
+        <div class="flex items-start justify-between gap-1">
+          <div>
+            <div class="font-mono text-xs">{{ scan.upc }}</div>
+            {% if scan.product_title %}
+            <div class="text-sm truncate">{{ scan.product_title }}</div>
+            {% endif %}
+          </div>
+          {% if scan.status == "failed" or scan.status == "not_found" %}
+          <a href="{% url 'scan' %}?upc={{ scan.upc }}" class="btn btn-ghost btn-xs">Retry</a>
+          {% endif %}
+        </div>
         <span class="badge badge-{% if scan.status == 'success' %}success{% elif scan.status == 'failed' %}error{% else %}warning{% endif %} badge-sm">
           {{ scan.get_status_display }}
         </span>

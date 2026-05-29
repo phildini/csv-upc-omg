@@ -46,7 +46,13 @@
           {% endif %}
 
           <div class="mt-6">
-            <h2 class="text-lg font-semibold mb-2">Your Inventory Items</h2>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-lg font-semibold">Your Inventory Items</h2>
+              <a href="{% url 'item-create' %}?product={{ product.upc }}" class="btn btn-primary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                Add to Inventory
+              </a>
+            </div>
             {% if user_items %}
             <div class="space-y-3">
               {% for item in user_items %}
@@ -107,7 +113,15 @@
               {% endfor %}
             </div>
             {% else %}
-            <p class="text-base-content/60">No inventory items found for this product.</p>
+            <div class="card bg-base-200 border-2 border-dashed">
+              <div class="card-body text-center py-8">
+                <p class="text-base-content/60 mb-4">You don't have this product in your inventory yet.</p>
+                <a href="{% url 'item-create' %}?product={{ product.upc }}" class="btn btn-primary">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  Add to My Inventory
+                </a>
+              </div>
+            </div>
             {% endif %}
           </div>
         </div>

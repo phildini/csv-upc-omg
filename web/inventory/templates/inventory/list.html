@@ -83,7 +83,9 @@
             No inventory items yet.
           {% endif %}
         </p>
-        {% if not search_query and not status_filter and not location_filter %}
+        {% if search_query or status_filter or location_filter %}
+        <a href="{% url 'item-list' %}" class="btn btn-ghost">Clear Filters</a>
+        {% else %}
         <a href="{% url 'scan' %}" class="btn btn-primary">Scan your first barcode</a>
         {% endif %}
       </div>

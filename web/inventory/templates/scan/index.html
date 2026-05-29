@@ -35,7 +35,8 @@
         <label class="form-control w-full">
           <input type="text" id="manual-upc" placeholder="Enter UPC (e.g. 012345678905)"
                  pattern="[0-9]{12,14}" maxlength="14"
-                 class="input input-bordered w-full" />
+                 class="input input-bordered w-full"
+                 value="{{ request.GET.upc|default:'' }}" />
         </label>
         <button onclick="submitManual()" class="btn btn-primary mt-2 w-full">Lookup</button>
 
@@ -121,6 +122,12 @@ function submitManual() {
   const upc = document.getElementById('manual-upc').value.trim();
   if (upc) submitUPC(upc);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const upc = params.get('upc');
+  if (upc) submitManual();
+});
 
 function submitUPC(upc) {
   document.getElementById('result-area').innerHTML =

@@ -27,6 +27,9 @@
           <div class="badge badge-{{ scan.status }} badge-sm gap-1">
             {{ scan.get_status_display }}
           </div>
+          {% if scan.status == "failed" or scan.status == "not_found" %}
+          <a href="{% url 'scan' %}?upc={{ scan.upc }}" class="btn btn-ghost btn-xs">Retry</a>
+          {% endif %}
           <span class="text-xs text-base-content/40 whitespace-nowrap">{{ scan.created_at|date:"M d H:i" }}</span>
         </div>
       </li>
